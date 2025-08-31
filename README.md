@@ -36,29 +36,4 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 
 ---
 
-## 📥 Download / Installation
-
-### Download: 👉 [[Grab the latest release here]](https://github.com/Knuspii/crunchycleaner/releases)
-
-### 🛠️ Build from Source
-
-1. Install [Go](https://go.dev/dl/) (version 1.24+ recommended):
-```bash
-go version
-```
-
-2. Clone the repository:
-```bash
-git clone https://github.com/Knuspii/crunchycleaner.git
-cd crunchycleaner
-```
-
-3. Build the project:
-```bash
-go build -o crunchycleaner CrunchyCleaner.go
-```
-
-4. Run it:
-```bash
-./crunchycleaner
-```
+## 📥 [[Download here]](https://github.com/Knuspii/crunchycleaner/releases)
