@@ -155,64 +155,47 @@ func clearScreen() {
 	}
 }
 
-// getUptime returns the system uptime as a formatted string, e.g., "12H:34M".
-// Supports Windows and Linux/Unix systems.
-func getUptime() string {
-	// Helper function to format a duration into "H:MM" format
-	formatUptime := func(d time.Duration) string {
-		h := int(d.Hours())          // Total hours
-		m := int(d.Minutes()) - h*60 // Remaining minutes
-		if h > 999 {                 // Cap hours at 999 for display
-			return "+999H"
+// getDiskInfo returns (total, free) disk space as human-readable strings
+func getDiskInfo() (string, string) {
+	var diskTotal, diskFree string
+
+	if goos == "windows" {
+		// Windows: PowerShell query
+		sizeOut, _ := exec.Command("powershell", "-Command",
+			"(Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Name -eq 'C'}).Used, (Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Name -eq 'C'}).Free").Output()
+		parts := strings.Fields(string(sizeOut))
+		if len(parts) >= 2 {
+			used, _ := strconv.ParseFloat(parts[0], 64)
+			free, _ := strconv.ParseFloat(parts[1], 64)
+			total := used + free
+			diskTotal = fmt.Sprintf("%.0f MB", total/1024/1024)
+			diskFree = fmt.Sprintf("%.0f MB", free/1024/1024)
 		}
-		return fmt.Sprintf("%dH:%02dM", h, m)
+	} else {
+		// Linux / Unix: df
+		dfOut, _ := exec.Command("sh", "-c", "df -h --output=size,avail / | tail -1").Output()
+		parts := strings.Fields(string(dfOut))
+		if len(parts) >= 2 {
+			diskTotal = parts[0]
+			diskFree = parts[1]
+		}
 	}
 
-	switch goos {
-	case "windows":
-		// Windows: get last boot time using PowerShell
-		out, err := runCommand([]string{
-			"powershell", "-Command",
-			"(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToString('s')",
-		})
-		if err != nil {
-			return "unknown" // Unable to retrieve boot time
-		}
+	return diskTotal, diskFree
+}
 
-		bootTimeStr := strings.TrimSpace(out)
-		layout := "2006-01-02T15:04:05"      // PowerShell ISO-like format
-		loc, _ := time.LoadLocation("Local") // Local timezone
-		bootTime, err := time.ParseInLocation(layout, bootTimeStr, loc)
-		if err != nil {
-			return "unknown" // Failed to parse boot time
-		}
-
-		// Calculate uptime and format
-		return formatUptime(time.Since(bootTime))
-
-	default:
-		// Linux/Unix: read boot time from /proc/stat
-		data, err := os.ReadFile("/proc/stat")
-		if err != nil {
-			return "unknown" // Unable to read file
-		}
-
-		// Search for "btime" line which contains boot timestamp
-		for _, line := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(line, "btime ") {
-				parts := strings.Fields(line)
-				if len(parts) == 2 {
-					sec, err := strconv.ParseInt(parts[1], 10, 64)
-					if err != nil {
-						return "unknown" // Failed to parse timestamp
-					}
-					bootTime := time.Unix(sec, 0)
-					return formatUptime(time.Since(bootTime))
-				}
-			}
-		}
-		return "unknown" // btime not found
+// getFreeMB returns free disk space in MB (numeric, for diff calculation)
+func getFreeMB() int64 {
+	if goos == "windows" {
+		out, _ := exec.Command("powershell", "-Command",
+			"(Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Name -eq 'C'}).Free").Output()
+		free, _ := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
+		return free / 1024 / 1024
 	}
+
+	out, _ := exec.Command("sh", "-c", "df --output=avail / | tail -1").Output()
+	free, _ := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
+	return free / 1024
 }
 
 // ============================================================ CORE FUNCTIONS ============================================================
@@ -368,6 +351,7 @@ func cleanup(mode string) {
 	}
 
 	// Execute all tasks
+	startFree := getFreeMB()
 	for _, t := range tasks {
 		ctx, cancel := context.WithCancel(context.Background())
 		go asyncSpinner(ctx, "Running: "+t.desc)
@@ -385,6 +369,13 @@ func cleanup(mode string) {
 		}
 
 		time.Sleep(200 * time.Millisecond)
+	}
+	endFree := getFreeMB()
+	diff := endFree - startFree
+	if diff > 0 {
+		printInfo(fmt.Sprintf("Cleanup freed approx %s%d MB%s disk space", YELLOW, diff, RC))
+	} else {
+		printInfo(fmt.Sprintf("Cleanup freed %sno%s additional disk space", YELLOW, RC))
 	}
 }
 
@@ -471,18 +462,14 @@ func startup() {
 
 // showBanner prints ASCII art and system info
 func showBanner() {
-	uptime := getUptime()
-	if uptime == "unknown" || uptime == "" {
-		printError("Could not determine system uptime, using fallback")
-		uptime = "0H:00M"
-	}
+	total, free := getDiskInfo()
 	line()
 	fmt.Print(YELLOW + `░░      ░░░       ░░░  ░░░░  ░░   ░░░  ░░░      ░░░  ░░░░  ░░  ░░░░  ░
 ▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒▒  ▒▒  ▒▒
 ▓  ▓▓▓▓▓▓▓▓       ▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓  ▓▓▓▓▓▓▓▓        ▓▓▓▓    ▓▓▓
 █  ████  ██  ███  ███  ████  ██  ██    ██  ████  ██  ████  █████  ████
 ██      ███  ████  ███      ███  ███   ███      ███  ████  █████  ████
-  ______   __        ________   ______   ___   __  ________  _______
+  ______   __        ________   ______   ___   __  ________  _______  
 ░░      ░░░  ░░░░░░░░        ░░░      ░░░   ░░░  ░░        ░░       ░░
 ▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒
 ▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓      ▓▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓      ▓▓▓▓       ▓▓
@@ -490,10 +477,10 @@ func showBanner() {
 ██      ███        ██        ██  ████  ██  ███   ██        ██  ████  █
 ` + RC)
 	line()
-	fmt.Printf(" | CrunchyCleaner - Cleanup your system!\n")
-	fmt.Printf(" | Made by: Knuspii, (M)\n")
-	fmt.Printf(" | Version: %s\n", CC_VERSION)
-	fmt.Printf(" | Uptime:  %s\n", uptime)
+	fmt.Printf(" CrunchyCleaner - Cleanup your system!\n")
+	fmt.Printf(" Made by: Knuspii, (M)\n")
+	fmt.Printf(" Version: %s\n", CC_VERSION)
+	fmt.Printf(" Disk-Space: %s / %s\n", total, free)
 	line()
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" %s[full clean]%s - Does a Full-Cleanup\n", YELLOW, RC)
