@@ -3,20 +3,25 @@
 [![GitHub Issues](https://img.shields.io/github/issues/Knuspii/crunchycleaner)](https://github.com/Knuspii/crunchycleaner/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/Knuspii/crunchycleaner?style=social)](https://github.com/Knuspii/crunchycleaner/stargazers)
 
-<div align="center"> <pre>
-  ______   _______   __    __  ___   __   ______   __    __  __    __ 
-░░      ░░░       ░░░  ░░░░  ░░   ░░░  ░░░      ░░░  ░░░░  ░░  ░░░░  ░
-▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒▒  ▒▒  ▒▒
-▓  ▓▓▓▓▓▓▓▓       ▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓  ▓▓▓▓▓▓▓▓        ▓▓▓▓    ▓▓▓
-█  ████  ██  ███  ███  ████  ██  ██    ██  ████  ██  ████  █████  ████
-██      ███  ████  ███      ███  ███   ███      ███  ████  █████  ████
-  ______   __        ________   ______   ___   __  ________  _______  
-░░      ░░░  ░░░░░░░░        ░░░      ░░░   ░░░  ░░        ░░       ░░
-▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒
-▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓      ▓▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓      ▓▓▓▓       ▓▓
-█  ████  ██  ████████  ████████        ██  ██    ██  ████████  ███  ██
-██      ███        ██        ██  ████  ██  ███   ██        ██  ████  █
-</pre> </div>
+<h1>CrunchyCleaner 🧹</h1>
+
+<p align="center">
+<pre>
+  ____________________     .-.
+ |  |              |  |    |_|
+ |[]|              |[]|    | |
+ |  |              |  |    |=|
+ |  |              |  |  .=/I\=.
+ |  |              |  | ////V\\\\
+ |  |______________|  | |#######|
+ |                    | |||||||||
+ |     ____________   |
+ |    | __      |  |  |
+ |    ||  |     |  |  |
+ |    ||__|     |  |  | CrunchyCleaner - Cleanup your system!
+ |____|_________|__|__| Made by: Knuspii, (M)
+</pre>
+</p>
 
 ### ✨ A lightweight, cross-platform system cleanup tool written in **Go**
 CrunchyCleaner is made to be simple, easy and *very crunchy indeed!*\
@@ -36,4 +41,15 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 
 ---
 
-## 📥 [[Download here]](https://github.com/Knuspii/crunchycleaner/releases)
+## 📥 [[Download here]](https://github.com/Knuspii/crunchycleaner/releases) <- Click here to download CrunchyCleaner!
+
+## Usage
+
+```
+No option   Run with TUI
+-s          Run Safe-Cleanup
+-f          Run Full-Cleanup
+-u {user}   Run User-Cleanup
+-f          Show version
+-h          Show this help page
+```
