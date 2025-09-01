@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	CC_VERSION = "0.1"
+	CC_VERSION = "0.2"
 	COLS       = 70
 	LINES      = 30
 	CMDWAIT    = 2 * time.Second        // Wait time running a command
@@ -34,9 +34,10 @@ const (
 )
 
 var (
-	consoleRunning = true
-	goos           = runtime.GOOS
-	reader         = bufio.NewReader(os.Stdin)
+	consoleRunning  = true
+	selectedProfile = ""
+	goos            = runtime.GOOS
+	reader          = bufio.NewReader(os.Stdin)
 	//SPINNERFRAMES  = []rune{'⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'}
 	SPINNERFRAMES = []rune{'|', '/', '-', '\\'}
 )
@@ -64,23 +65,8 @@ func cmdline() {
 
 // Pause waits for enter
 func pause() {
-	fmt.Printf("\nPress [Enter] to continue: ")
+	fmt.Printf("\nPress [ENTER] to continue: ")
 	reader.ReadString('\n')
-}
-
-// yesNo asks question, returns true if yes
-func yesNo(question string) bool {
-	for {
-		fmt.Printf("%s (yes/no)%s", question, PROMPT)
-		answer, _ := reader.ReadString('\n')
-		answer = strings.ToLower(strings.TrimSpace(answer))
-		switch answer {
-		case "y", "yes", "ye", "yup", "ja":
-			return true
-		case "n", "no", "nope", "nah", "ne", "nein":
-			return false
-		}
-	}
 }
 
 // asyncSpinner displays a spinning "loading" animation in the terminal.
@@ -173,11 +159,11 @@ func getDiskInfo() (string, string) {
 		}
 	} else {
 		// Linux / Unix: df
-		dfOut, _ := exec.Command("sh", "-c", "df -h --output=size,avail / | tail -1").Output()
+		dfOut, _ := exec.Command("sh", "-c", "df -BM --output=size,avail / | tail -1 | tr -d 'M'").Output()
 		parts := strings.Fields(string(dfOut))
 		if len(parts) >= 2 {
-			diskTotal = parts[0]
-			diskFree = parts[1]
+			diskTotal = parts[0] + " MB"
+			diskFree = parts[1] + " MB"
 		}
 	}
 
@@ -199,7 +185,7 @@ func getFreeMB() int64 {
 }
 
 // ============================================================ CORE FUNCTIONS ============================================================
-func cleanup(mode string) {
+func cleanup(mode string, username ...string) {
 	// Define a cleanup task with a description and the command to execute
 	type task struct {
 		desc string   // Description of the task (for logging/spinner)
@@ -211,7 +197,7 @@ func cleanup(mode string) {
 	case "user":
 		var profiles []string
 		switch goos {
-		case "windows": // Windows
+		case "windows":
 			userBase := os.Getenv("SystemDrive") + `\Users`
 			files, err := os.ReadDir(userBase)
 			if err != nil {
@@ -219,16 +205,13 @@ func cleanup(mode string) {
 				fmt.Printf("%s\n", err)
 				return
 			}
-
 			for _, f := range files {
-				//if f.IsDir() && f.Name() != "Public" && f.Name() != "Default" && f.Name() != "Default User" {
 				if f.IsDir() {
 					profiles = append(profiles, f.Name())
 				}
 			}
 
 		default: // Linux / Unix-like
-			// Usually /home for user folders
 			files, err := os.ReadDir("/home")
 			if err != nil {
 				printError("Reading /home folder: ")
@@ -247,31 +230,47 @@ func cleanup(mode string) {
 			return
 		}
 
-		fmt.Println("Available profiles:")
-		fmt.Printf("%s[0]%s %s\n", YELLOW, RC, "Cancel")
-		for i, p := range profiles {
-			fmt.Printf("%s[%d]%s %s\n", YELLOW, i+1, RC, p)
+		// If cli-argument
+		if len(username) > 0 {
+			selectedProfile = username[0]
+
+			// Check if user exists
+			valid := false
+			for _, p := range profiles {
+				if p == selectedProfile {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				printError("Invalid profile name provided")
+				return
+			}
+
+		} else {
+			// Interaktive Auswahl
+			fmt.Println("Available profiles:")
+			for _, p := range profiles {
+				fmt.Printf("  %s\n", p)
+			}
+			fmt.Printf("Select profile name to clean%s", PROMPT)
+			choice, _ := reader.ReadString('\n')
+			choice = strings.TrimSpace(choice)
+
+			valid := false
+			for _, p := range profiles {
+				if p == choice {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				printError("Invalid profile name provided")
+				return
+			}
+			selectedProfile = choice
 		}
 
-		fmt.Printf("Select profile number to clean%s", PROMPT)
-		choice, _ := reader.ReadString('\n')
-		choice = strings.TrimSpace(choice)
-		choiceInt, err := strconv.Atoi(choice)
-		if err != nil {
-			fmt.Printf("Invalid input\n")
-			return
-		}
-		//
-		if choiceInt == 0 {
-			fmt.Printf("User-Cleanup cancelled\n")
-			return
-		}
-		if choiceInt < 1 || choiceInt > len(profiles) {
-			fmt.Printf("Invalid choice\n")
-			return
-		}
-
-		selectedProfile := profiles[choiceInt-1]
 		fmt.Printf("%sSelected profile: %s%s\n", YELLOW, selectedProfile, RC)
 
 		switch goos {
@@ -280,9 +279,10 @@ func cleanup(mode string) {
 			tasks = []task{
 				{"Cleaning Temp Files", []string{"powershell", "-Command", fmt.Sprintf("Get-ChildItem -Path '%s\\AppData\\Local\\Temp' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue", userPath)}},
 				{"Cleaning Thumbnail Cache", []string{"powershell", "-Command", fmt.Sprintf("Remove-Item -Path '%s\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_*' -Force -ErrorAction SilentlyContinue", userPath)}},
+				{"Cleaning Recycle Bin", []string{"powershell", "(New-Object -ComObject Shell.Application).NameSpace(10).Items() | ForEach-Object { Remove-Item $_.Path -Force -Recurse -ErrorAction SilentlyContinue }"}},
 			}
 
-		case "linux":
+		default:
 			userPath := "/home/" + selectedProfile
 			tasks = []task{
 				{"Cleaning Temp Files", []string{"sh", "-c", fmt.Sprintf("rm -rf %s/tmp/*", userPath)}},
@@ -291,73 +291,119 @@ func cleanup(mode string) {
 			}
 		}
 	default:
-		// Fallthrough to safe/full cleanup
-	}
+		switch goos {
+		case "windows": // Windows
+			switch mode {
+			default:
+				tasks = []task{
+					// Windows Safe Cleanup
+					// Basic
+					{"Cleaning Delivery Optimization", []string{"powershell", "Remove-Item", "$env:SystemDrive\\ProgramData\\Microsoft\\Network\\Downloader\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Explorer MRU", []string{"powershell", "Remove-Item", "$env:APPDATA\\Microsoft\\Windows\\Recent\\*", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					// Windows
+					{"Cleaning Old Windows Updates", []string{"dism", "/Online", "/Cleanup-Image", "/StartComponentCleanup", "/Quiet"}},
+					{"Cleaning Windows Update Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\SoftwareDistribution\\Download\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					// Extra
+					{"Flushing DNS Cache", []string{"ipconfig", "/flushdns"}},
+				}
+			case "full":
+				tasks = []task{
+					// Windows Full Cleanup
+					// Basic
+					{"Stopping Windows Update service", []string{"powershell", "Stop-Service", "-Name", "wuauserv", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Stopping BITS service", []string{"powershell", "Stop-Service", "-Name", "bits", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Recycle Bin", []string{"powershell", "(New-Object -ComObject Shell.Application).NameSpace(10).Items() | ForEach-Object { Remove-Item $_.Path -Force -Recurse -ErrorAction SilentlyContinue }"}},
+					{"Cleaning Temp Files", []string{"powershell", "-Command", "Get-ChildItem -Path $env:TEMP | ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }"}},
+					{"Cleaning Thumbnail Cache", []string{"powershell", "Remove-Item", "$env:LOCALAPPDATA\\Microsoft\\Windows\\Explorer\\thumbcache_*", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Explorer MRU", []string{"powershell", "Remove-Item", "$env:APPDATA\\Microsoft\\Windows\\Recent\\*", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Delivery Optimization", []string{"powershell", "Remove-Item", "$env:SystemDrive\\ProgramData\\Microsoft\\Network\\Downloader\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Error Reporting", []string{"powershell", "Remove-Item", "$env:ProgramData\\Microsoft\\Windows\\WER\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Prefetch", []string{"powershell", "Remove-Item", "C:\\Windows\\Prefetch\\*", "-Force", "-Recurse", "-ErrorAction", "SilentlyContinue"}},
+					// Windows
+					{"Cleaning Windows Update Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\SoftwareDistribution\\Download\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Windows Installer Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\Installer\\$PatchCache$\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Windows Temp (WinDir)", []string{"powershell", "Remove-Item", "C:\\Windows\\Temp\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					{"Cleaning Windows Temp Files", []string{"powershell", "Remove-Item", "$env:LOCALAPPDATA\\Microsoft\\Windows\\Caches\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
+					// Extra
+					{"Cleaning Old Windows Updates (DISM)", []string{"dism", "/Online", "/Cleanup-Image", "/StartComponentCleanup", "/Quiet"}},
+					{"Flushing DNS Cache", []string{"ipconfig", "/flushdns"}},
+				}
+			}
 
-	switch goos {
-	case "windows": // Windows
-		switch mode {
-		default:
-			tasks = []task{
-				// Windows Safe Cleanup
-				{"Cleaning Windows Update Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\SoftwareDistribution\\Download\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Cleaning Delivery Optimization", []string{"powershell", "Remove-Item", "$env:SystemDrive\\ProgramData\\Microsoft\\Network\\Downloader\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Flushing DNS Cache", []string{"ipconfig", "/flushdns"}},
-			}
-		case "full":
-			tasks = []task{
-				// Windows Full Cleanup
-				{"Stopping Windows Update service", []string{"powershell", "Stop-Service", "-Name", "wuauserv", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Stopping BITS service", []string{"powershell", "Stop-Service", "-Name", "bits", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Cleaning Prefetch", []string{"powershell", "Remove-Item", "C:\\Windows\\Prefetch\\*", "-Force", "-Recurse", "-ErrorAction", "SilentlyContinue"}},
-				{"Cleaning Error Reporting", []string{"powershell", "Remove-Item", "$env:ProgramData\\Microsoft\\Windows\\WER\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Cleaning Windows Update Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\SoftwareDistribution\\Download\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Cleaning Delivery Optimization", []string{"powershell", "Remove-Item", "$env:SystemDrive\\ProgramData\\Microsoft\\Network\\Downloader\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Cleaning Thumbnail Cache", []string{"powershell", "Remove-Item", "$env:LOCALAPPDATA\\Microsoft\\Windows\\Explorer\\thumbcache_*", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Cleaning Recycle Bin", []string{"powershell", "(New-Object -ComObject Shell.Application).NameSpace(10).Items() | ForEach-Object { Remove-Item $_.Path -Force -Recurse -ErrorAction SilentlyContinue }"}},
-				{"Cleaning Temp Files", []string{"powershell", "-Command", "Get-ChildItem -Path $env:TEMP | ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }"}},
-				{"Cleaning Windows Temp Files", []string{"powershell", "Remove-Item", "$env:LOCALAPPDATA\\Microsoft\\Windows\\Caches\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-				{"Flushing DNS Cache", []string{"ipconfig", "/flushdns"}},
-			}
-		}
-
-	default: // Linux / Unix-like
-		switch mode {
-		default:
-			tasks = []task{
-				// Linux Safe Cleanup
-				{"Cleaning Apt Cache", []string{"sudo", "apt-get", "clean"}},
-				{"Cleaning Flatpak Cache", []string{"flatpak", "uninstall", "--unused", "-y"}},
-				{"Cleaning Snap Cache", []string{"sudo", "rm", "-rf", "/var/cache/snapd/*"}},
-				{"Cleaning DNF Cache", []string{"sh", "-c", "rm -rf /var/cache/dnf/*"}},
-				{"Cleaning Pacman Cache", []string{"sh", "-c", "rm -rf /var/cache/pacman/pkg/*"}},
-				{"Cleaning System Logs (older than 90 days)", []string{"journalctl", "--vacuum-time=90d"}},
-			}
-		case "full":
-			tasks = []task{
-				// Linux Full Cleanup
-				{"Cleaning Apt Cache", []string{"sudo", "apt-get", "clean"}},
-				{"Cleaning Flatpak Cache", []string{"flatpak", "uninstall", "--unused", "-y"}},
-				{"Cleaning Snap Cache", []string{"sudo", "rm", "-rf", "/var/cache/snapd/*"}},
-				{"Cleaning DNF Cache", []string{"sh", "-c", "rm -rf /var/cache/dnf/*"}},
-				{"Cleaning Pacman Cache", []string{"sh", "-c", "rm -rf /var/cache/pacman/pkg/*"}},
-				{"Running Nix Garbage Collector", []string{"nix-collect-garbage", "-d"}},
-				{"Cleaning Thumbnail Cache", []string{"sh", "-c", "rm -rf ~/.cache/thumbnails/*"}},
-				{"Cleaning System Logs (older than 7 days)", []string{"journalctl", "--vacuum-time=7d"}},
-				{"Cleaning Trash", []string{"sh", "-c", "rm -rf ~/.local/share/Trash/*"}},
-				{"Cleaning Temp Files", []string{"sh", "-c", "rm -rf /tmp/*"}},
+		default: // Linux / Unix-like
+			switch mode {
+			default:
+				tasks = []task{
+					// Linux Safe Cleanup
+					// Basic
+					{"Cleaning System Logs (older than 90 days)", []string{"journalctl", "--vacuum-time=90d"}},
+					// Extra
+					{"Cleaning Apt Cache", []string{"sudo", "apt-get", "clean"}},
+					{"Cleaning Flatpak Cache", []string{"flatpak", "uninstall", "--unused", "-y"}},
+					{"Cleaning Pip Cache", []string{"pip", "cache", "purge"}},
+					{"Cleaning Npm Cache", []string{"npm", "cache", "clean", "--force"}},
+					{"Cleaning Yarn Cache", []string{"yarn", "cache", "clean"}},
+					{"Cleaning Snap Cache", []string{"sudo", "rm", "-rf", "/var/cache/snapd/*"}},
+					{"Cleaning DNF Cache", []string{"sh", "-c", "rm -rf /var/cache/dnf/*"}},
+					{"Cleaning Pacman Cache", []string{"sh", "-c", "rm -rf /var/cache/pacman/pkg/*"}},
+				}
+			case "full":
+				tasks = []task{
+					// Linux Full Cleanup
+					// Basic
+					{"Cleaning Thumbnail Cache", []string{"sh", "-c", "rm -rf ~/.cache/thumbnails/*"}},
+					{"Cleaning System Logs (all)", []string{"sh", "-c", "rm -rf /var/log/journal/*"}},
+					{"Cleaning Trash", []string{"sh", "-c", "rm -rf ~/.local/share/Trash/*"}},
+					{"Cleaning Temp Files", []string{"sh", "-c", "rm -rf /tmp/*"}},
+					{"Cleaning Var Temp Files", []string{"sh", "-c", "rm -rf /var/tmp/*"}},
+					// Extra
+					{"Cleaning Apt Cache", []string{"sudo", "apt-get", "clean"}},
+					{"Cleaning Flatpak Cache", []string{"flatpak", "uninstall", "--unused", "-y"}},
+					{"Cleaning Pip Cache", []string{"pip", "cache", "purge"}},
+					{"Cleaning Npm Cache", []string{"npm", "cache", "clean", "--force"}},
+					{"Cleaning Yarn Cache", []string{"yarn", "cache", "clean"}},
+					{"Cleaning Snap Cache", []string{"sudo", "rm", "-rf", "/var/cache/snapd/*"}},
+					{"Cleaning DNF Cache", []string{"sh", "-c", "rm -rf /var/cache/dnf/*"}},
+					{"Cleaning Pacman Cache", []string{"sh", "-c", "rm -rf /var/cache/pacman/pkg/*"}},
+					{"Running Nix Garbage Collector", []string{"nix-collect-garbage", "-d"}},
+				}
 			}
 		}
 	}
 
 	// Execute all tasks
 	startFree := getFreeMB()
+
+	// Preview what will be executed
+	fmt.Printf("The following cleanup tasks will be executed:\n")
+	for _, t := range tasks {
+		fmt.Printf("%s- %s%s\n  → %s\n", CYAN, t.desc, RC, strings.Join(t.cmd, " "))
+	}
+	fmt.Printf("\nDo you want to continue? [Y/n]%s", PROMPT)
+
+	choice, _ := reader.ReadString('\n')
+	choice = strings.TrimSpace(strings.ToLower(choice))
+	if choice != "y" && choice != "yes" && choice != "" {
+		printInfo("Cleanup aborted by user")
+		return
+	}
+
+	fmt.Printf("\n")
+	printInfo("!!! You use this tool at your own risk !!!")
+	printInfo("You can ignore most errors. Press [CTRL+C] to cancel")
+	printInfo("*** Cleanup STARTED ***\n")
+	time.Sleep(2 * time.Second)
+
+	// Now run them
 	for _, t := range tasks {
 		ctx, cancel := context.WithCancel(context.Background())
 		go asyncSpinner(ctx, "Running: "+t.desc)
 		time.Sleep(CMDWAIT)
 
+		startFreeLoop := getFreeMB()
 		_, err := runCommand(t.cmd)
+		endFreeLoop := getFreeMB()
+		diffLoop := endFreeLoop - startFreeLoop
 		cancel()
 		fmt.Printf("\r\033[2K") // Clear spinner line
 
@@ -365,7 +411,7 @@ func cleanup(mode string) {
 			printError(t.desc + " FAILED")
 			fmt.Printf("  Error: %s\n", err)
 		} else {
-			printTask(t.desc + " FINISHED")
+			printTask(fmt.Sprintf("%s FINISHED | %s%d MB%s", t.desc, YELLOW, diffLoop, RC))
 		}
 
 		time.Sleep(200 * time.Millisecond)
@@ -373,10 +419,11 @@ func cleanup(mode string) {
 	endFree := getFreeMB()
 	diff := endFree - startFree
 	if diff > 0 {
-		printInfo(fmt.Sprintf("Cleanup freed approx %s%d MB%s disk space", YELLOW, diff, RC))
+		printInfo(fmt.Sprintf("Cleaned approx %s%d MB%s disk space", YELLOW, diff, RC))
 	} else {
-		printInfo(fmt.Sprintf("Cleanup freed %sno%s additional disk space", YELLOW, RC))
+		printInfo(fmt.Sprintf("Cleaned %sno%s additional disk space", YELLOW, RC))
 	}
+	printSuccess("*** Cleanup FINISHED ***")
 }
 
 // ============================================================ CONSOLE / STARTUP ============================================================
@@ -389,8 +436,7 @@ func startup() {
 			// If it fails, try to restart the program as admin
 			printInfo("Restarting as admin...\n")
 
-			elevate := exec.Command("powershell", "-Command",
-				"Start-Process", os.Args[0], "-Verb", "RunAs")
+			elevate := exec.Command("powershell", "-Command", "Start-Process", os.Args[0], "-Verb", "RunAs")
 
 			// Connect the elevated process output to the current console
 			elevate.Stdout = os.Stdout
@@ -400,8 +446,7 @@ func startup() {
 				// Failed to elevate privileges
 				printError(fmt.Sprintf("Failed to restart as admin: %v", err))
 				fmt.Println("CrunchyCleaner might not work correctly without admin rights.")
-				fmt.Print("Press [Enter] to continue anyway: ")
-				reader.ReadString('\n')
+				pause()
 			} else {
 				// Successfully elevated, exit current process
 				os.Exit(0)
@@ -441,47 +486,29 @@ func startup() {
 			}
 		}
 	}
-
-	switch goos {
-	case "windows":
-		// Set PowerShell window size and buffer
-		psCmd := fmt.Sprintf(
-			`$Host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(%d, %d); $Host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size(%d, 300)`,
-			COLS, LINES, COLS,
-		)
-		_, err := runCommand([]string{"powershell", "-Command", psCmd})
-		if err != nil {
-			printError("Failed to set window size: " + err.Error())
-		}
-
-	default:
-		// Set Unix terminal size using ANSI escape codes
-		fmt.Printf("\033[8;%d;%dt", LINES, COLS)
-	}
 }
 
 // showBanner prints ASCII art and system info
 func showBanner() {
 	total, free := getDiskInfo()
+	fmt.Printf(`%s  ____________________     .-.
+ |  |              |  |    |_|
+ |[]|              |[]|    | |
+ |  |              |  |    |=|
+ |  |              |  |  .=/I\=.
+ |  |              |  | ////V\\\\
+ |  |______________|  | |#######|
+ |                    | |||||||||
+ |     ____________   |
+ |    | __      |  |  | CrunchyCleaner - Cleanup your system!
+ |    ||  |     |  |  | Made by: Knuspii, (M)
+ |    ||__|     |  |  | Version: %s
+ |____|_________|__|__| Disk-Space: %s / %s%s
+`, YELLOW, CC_VERSION, free, total, RC)
 	line()
-	fmt.Print(YELLOW + `░░      ░░░       ░░░  ░░░░  ░░   ░░░  ░░░      ░░░  ░░░░  ░░  ░░░░  ░
-▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒▒  ▒▒  ▒▒
-▓  ▓▓▓▓▓▓▓▓       ▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓  ▓▓▓▓▓▓▓▓        ▓▓▓▓    ▓▓▓
-█  ████  ██  ███  ███  ████  ██  ██    ██  ████  ██  ████  █████  ████
-██      ███  ████  ███      ███  ███   ███      ███  ████  █████  ████
-  ______   __        ________   ______   ___   __  ________  _______  
-░░      ░░░  ░░░░░░░░        ░░░      ░░░   ░░░  ░░        ░░       ░░
-▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒
-▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓      ▓▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓      ▓▓▓▓       ▓▓
-█  ████  ██  ████████  ████████        ██  ██    ██  ████████  ███  ██
-██      ███        ██        ██  ████  ██  ███   ██        ██  ████  █
-` + RC)
-	line()
-	fmt.Printf(" CrunchyCleaner - Cleanup your system!\n")
-	fmt.Printf(" Made by: Knuspii, (M)\n")
-	fmt.Printf(" Version: %s\n", CC_VERSION)
-	fmt.Printf(" Disk-Space: %s / %s\n", total, free)
-	line()
+}
+
+func showCommands() {
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" %s[full clean]%s - Does a Full-Cleanup\n", YELLOW, RC)
 	fmt.Printf(" %s[safe clean]%s - Does a Safe-Cleanup\n", YELLOW, RC)
@@ -492,78 +519,75 @@ func showBanner() {
 	line()
 }
 
+func usage() {
+	fmt.Printf("Usage:\n")
+	fmt.Printf("  %scrunchycleaner [option]%s\n\n", CYAN, RC)
+	fmt.Printf("Options:\n")
+	fmt.Printf("  %sNo option%s   Run with TUI\n", YELLOW, RC)
+	fmt.Printf("  %s-s%s          Run Safe-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-f%s          Run Full-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-u {user}%s   Run User-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-f%s          Show version\n", YELLOW, RC)
+	fmt.Printf("  %s-h%s          Show this help page\n", YELLOW, RC)
+}
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-s":
+			showBanner()
+			cleanup("safe")
+			os.Exit(0)
+		case "-f":
+			showBanner()
+			cleanup("full")
+			os.Exit(0)
+		case "-u":
+			if len(os.Args) > 2 {
+				showBanner()
+				cleanup("user", os.Args[2])
+			} else {
+				printError("No profile name provided")
+				os.Exit(1)
+			}
+			os.Exit(0)
+		case "-h", "--help":
+			showBanner()
+			usage()
+			os.Exit(0)
+		case "-v", "--version":
+			fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
+			os.Exit(0)
+		default:
+			fmt.Printf("Unknown option: %s\n", os.Args[1])
+			usage()
+			os.Exit(1)
+		}
+	}
 	startup()
 	showBanner()
+	showCommands()
+
 	for consoleRunning {
 		fmt.Print("Enter command" + PROMPT)
 		cmd, _ := reader.ReadString('\n')
 		cmd = strings.TrimSpace(cmd)
+		cmdline()
 
 		switch cmd {
 		// FULL CLEAN
 		case "full clean", "full cleanup", "clean full", "cleanup full":
-			cmdname := "Full-Cleanup"
-			disclaimer := "!!! You use this tool at your own risk !!!"
-			yesnoquestion := "Are you sure you want to do a " + cmdname + "?"
-			startinfo := cmdname + " STARTED"
-			finishinfo := cmdname + " FINISHED"
-			cancelinfo := cmdname + " cancelled"
-
-			printInfo(disclaimer)
-			if yesNo(yesnoquestion) {
-				cmdline()
-				printInfo(startinfo)
-				printInfo("You can ignore most errors")
-				time.Sleep(CMDWAIT)
-				cleanup("full")
-				printSuccess(finishinfo)
-			} else {
-				fmt.Printf("%s\n", cancelinfo)
-			}
+			cleanup("full")
 			consoleRunning = false
 
 		// SAFE CLEAN
 		case "safe clean", "safe cleanup", "clean safe", "cleanup safe":
-			cmdname := "Safe-Cleanup"
-			disclaimer := "!!! You use this tool at your own risk !!!"
-			yesnoquestion := "Are you sure you want to do a " + cmdname + "?"
-			startinfo := cmdname + " STARTED"
-			finishinfo := cmdname + " FINISHED"
-			cancelinfo := cmdname + " cancelled"
-
-			printInfo(disclaimer)
-			if yesNo(yesnoquestion) {
-				cmdline()
-				printInfo(startinfo)
-				printInfo("You can ignore most errors")
-				time.Sleep(CMDWAIT)
-				cleanup("safe")
-				printSuccess(finishinfo)
-			} else {
-				fmt.Printf("%s\n", cancelinfo)
-			}
+			cleanup("safe")
 			consoleRunning = false
 
 		// USER CLEAN
 		case "user clean", "user cleanup", "clean user", "cleanup user":
-			cmdname := "User-Cleanup"
-			disclaimer := "!!! You use this tool at your own risk !!!"
-			yesnoquestion := "Are you sure you want to do a " + cmdname + "?"
-			startinfo := cmdname + " STARTED"
-			finishinfo := cmdname + " FINISHED"
-			cancelinfo := cmdname + " cancelled"
-
-			printInfo(disclaimer)
-			if yesNo(yesnoquestion) {
-				cmdline()
-				printInfo(startinfo)
-				printInfo("You can ignore most errors")
-				cleanup("user")
-				printSuccess(finishinfo)
-			} else {
-				fmt.Printf("%s\n", cancelinfo)
-			}
+			cleanup("user")
 			consoleRunning = false
 
 		// HELP
@@ -582,6 +606,7 @@ Made with: Go, Bash, Powershell
 Simple program with various functions.
 You use this tool at your own risk.
 I do not take any responsibilities.
+https://github.com/Knuspii/crunchycleaner
 `, CC_VERSION)
 			consoleRunning = false
 
@@ -594,6 +619,7 @@ I do not take any responsibilities.
 			clearScreen()
 			startup()
 			showBanner()
+			showCommands()
 
 		// EXIT
 		case "e", "q", "quit", "exit":
