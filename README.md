@@ -42,14 +42,3 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 ---
 
 ## 📥 [[Download here]](https://github.com/Knuspii/crunchycleaner/releases) <- Click here to download CrunchyCleaner!
-
-## Usage
-
-```
-No option   Run with TUI
--s          Run Safe-Cleanup
--f          Run Full-Cleanup
--u {user}   Run User-Cleanup
--f          Show version
--h          Show this help page
-```
