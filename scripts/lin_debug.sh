@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go run ..\src\crunchycleaner.go
+go run ../src/.
