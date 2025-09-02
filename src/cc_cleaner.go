@@ -1,4 +1,4 @@
-// CrunchyCleaner: Core Cleaner Function
+// CrunchyCleaner: Core Cleaner Functions
 
 package main
 
@@ -10,15 +10,35 @@ import (
 	"time"
 )
 
+// cleanFolder deletes **everything inside** a folder but keeps the folder itself alive
+func cleanFolder(folder string) error {
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		path := folder + string(os.PathSeparator) + entry.Name()
+		err := os.RemoveAll(path)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// cleanup orchestrates all cleanup tasks based on the mode (user/full/etc) and optionally a username.
 func cleanup(mode string, username ...string) {
 	// Define a cleanup task with a description and the command to execute
 	type task struct {
-		desc string   // Description of the task (for logging/spinner)
-		cmd  []string // Command and arguments to run
+		desc   string       // Short description of the task
+		cmd    []string     // Command-line slice to execute if it's a cmd task
+		goFunc func() error // Go function to execute if it's a Go-native task
 	}
 
 	var tasks []task
 	switch mode {
+	// ==================== USER PROFILE CLEANUP ==================== //
 	case "user":
 		var profiles []string
 		switch goos {
@@ -50,12 +70,13 @@ func cleanup(mode string, username ...string) {
 			}
 		}
 
+		// Bail out if we found no profiles
 		if len(profiles) == 0 {
 			printError("No user profiles found!")
 			return
 		}
 
-		// If cli-argument
+		// Handle CLI argument for username or interactive selection
 		if len(username) > 0 {
 			selectedProfile = username[0]
 
@@ -73,7 +94,7 @@ func cleanup(mode string, username ...string) {
 			}
 
 		} else {
-			// Interaktive Auswahl
+			// Interactive mode
 			fmt.Println("Available profiles:")
 			for _, p := range profiles {
 				fmt.Printf("  %s\n", p)
@@ -102,94 +123,102 @@ func cleanup(mode string, username ...string) {
 		case "windows":
 			userPath := os.Getenv("SystemDrive") + `\Users\` + selectedProfile
 			tasks = []task{
-				{"Cleaning Temp Files", []string{"powershell", "-Command", fmt.Sprintf("Get-ChildItem -Path '%s\\AppData\\Local\\Temp' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue", userPath)}},
-				{"Cleaning Thumbnail Cache", []string{"powershell", "-Command", fmt.Sprintf("Remove-Item -Path '%s\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_*' -Force -ErrorAction SilentlyContinue", userPath)}},
-				{"Cleaning Recycle Bin", []string{"powershell", "(New-Object -ComObject Shell.Application).NameSpace(10).Items() | ForEach-Object { Remove-Item $_.Path -Force -Recurse -ErrorAction SilentlyContinue }"}},
+				// ==================== WINDOWS USER-CLEANUP ====================
+				{desc: userPath + "\\AppData\\Local\\Microsoft\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Microsoft\Windows\Explorer`) }},
+				{desc: userPath + "\\AppData\\Local\\Temp (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Temp`) }},
+				{desc: "Recycle Bin for " + selectedProfile + " (shell)", cmd: []string{
+					"powershell",
+					`$userSID = (New-Object System.Security.Principal.NTAccount("` + selectedProfile + `")).Translate([System.Security.Principal.SecurityIdentifier]).Value;`,
+					`Remove-Item "C:\$Recycle.Bin\$userSID\*" -Recurse -Force`,
+				}},
 			}
-
 		default:
 			userPath := "/home/" + selectedProfile
 			tasks = []task{
-				{"Cleaning Temp Files", []string{"sh", "-c", fmt.Sprintf("rm -rf %s/tmp/*", userPath)}},
-				{"Cleaning Thumbnail Cache", []string{"sh", "-c", fmt.Sprintf("rm -rf %s/.cache/thumbnails/*", userPath)}},
-				{"Cleaning Trash", []string{"sh", "-c", fmt.Sprintf("rm -rf %s/.local/share/Trash/*", userPath)}},
+				// ==================== LINUX USER-CLEANUP ====================
+				{desc: userPath + "/.local/share/Trash (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.local/share/Trash") }},
+				{desc: userPath + "/.cache/thumbnails (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache/thumbnails") }},
+				{desc: userPath + "/.cache (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache") }},
+				{desc: userPath + "/.thumbnails (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.thumbnails") }},
 			}
 		}
+	// ==================== SYSTEM CLEANUP ==================== //
 	default:
 		switch goos {
+		// ==================== WINDOWS CLEANUP ==================== //
 		case "windows": // Windows
 			switch mode {
 			default:
 				tasks = []task{
-					// Windows Safe-Cleanup
-					// Basic
-					{"Cleaning Delivery Optimization", []string{"powershell", "Remove-Item", "$env:SystemDrive\\ProgramData\\Microsoft\\Network\\Downloader\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Explorer MRU", []string{"powershell", "Remove-Item", "$env:APPDATA\\Microsoft\\Windows\\Recent\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					// Windows
-					{"Cleaning Windows Update Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\SoftwareDistribution\\Download\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					// Extra
-					{"(ipconfig) Flushing DNS Cache", []string{"ipconfig", "/flushdns"}},
+					// ==================== WINDOWS SAFE-CLEANUP ====================
+					// ==================== BASICS ====================
+					{desc: "\\Microsoft\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
+					{desc: "\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
+					{desc: "%TEMP% (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
+					{desc: "Windows Event Logs older than 90 days (shell)", cmd: []string{"powershell", "Get-EventLog -LogName * | Where-Object {$_.TimeGenerated -lt (Get-Date).AddDays(-90)} | ForEach-Object { Clear-EventLog -LogName $_.Log }"}},
+					// ==================== EXTRAS ====================
+					{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
 				}
 			case "full":
 				tasks = []task{
-					// Windows Full-Cleanup
-					// Basic
-					{"Stopping Windows Update service", []string{"powershell", "Stop-Service", "-Name", "wuauserv", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Stopping BITS service", []string{"powershell", "Stop-Service", "-Name", "bits", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Recycle Bin", []string{"powershell", "(New-Object -ComObject Shell.Application).NameSpace(10).Items() | ForEach-Object { Remove-Item $_.Path -Force -Recurse -ErrorAction SilentlyContinue }"}},
-					{"Cleaning Temp Files", []string{"powershell", "-Command", "Get-ChildItem -Path $env:TEMP | ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }"}},
-					{"Cleaning Thumbnail Cache", []string{"powershell", "Remove-Item", "$env:LOCALAPPDATA\\Microsoft\\Windows\\Explorer\\thumbcache_*", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Explorer MRU", []string{"powershell", "Remove-Item", "$env:APPDATA\\Microsoft\\Windows\\Recent\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Delivery Optimization", []string{"powershell", "Remove-Item", "$env:SystemDrive\\ProgramData\\Microsoft\\Network\\Downloader\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Error Reporting", []string{"powershell", "Remove-Item", "$env:ProgramData\\Microsoft\\Windows\\WER\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Prefetch", []string{"powershell", "Remove-Item", "C:\\Windows\\Prefetch\\*", "-Force", "-Recurse", "-ErrorAction", "SilentlyContinue"}},
-					// Windows
-					{"Cleaning Windows Update Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\SoftwareDistribution\\Download\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Windows Installer Cache", []string{"powershell", "Remove-Item", "C:\\Windows\\Installer\\$PatchCache$\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Windows Temp (WinDir)", []string{"powershell", "Remove-Item", "C:\\Windows\\Temp\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					{"Cleaning Windows Temp Files", []string{"powershell", "Remove-Item", "$env:LOCALAPPDATA\\Microsoft\\Windows\\Caches\\*", "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue"}},
-					// Extra
-					{"(dism) Cleaning Old Windows Updates", []string{"dism", "/Online", "/Cleanup-Image", "/StartComponentCleanup", "/Quiet"}},
-					{"(ipconfig) Flushing DNS Cache", []string{"ipconfig", "/flushdns"}},
+					// ==================== WINDOWS FULL-CLEANUP ====================
+					// ==================== BASICS ====================
+					{desc: "\\Microsoft\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
+					{desc: "\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
+					{desc: "%TEMP% (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
+					{desc: "Recycle Bin (shell)", cmd: []string{"powershell", "Clear-RecycleBin -Force -Confirm:$false"}},
+					{desc: "Windows Event Logs older than 10 days (shell)", cmd: []string{"powershell", "Get-EventLog -LogName * | Where-Object {$_.TimeGenerated -lt (Get-Date).AddDays(-30)} | ForEach-Object { Clear-EventLog -LogName $_.Log }"}},
+					{desc: "Windows Update Cache (shell)", cmd: []string{"powershell", "Remove-Item -Path $env:SystemRoot\\SoftwareDistribution\\Download\\* -Recurse -Force"}},
+					{desc: "\\System32\\winevt\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\winevt\Logs`) }},
+					{desc: "\\Microsoft\\Windows\\Recent (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("APPDATA") + `\Microsoft\Windows\Recent`) }},
+					{desc: "\\Microsoft\\Windows\\WindowsUpdate\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`) }},
+					{desc: "\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Logs`) }},
+					{desc: "\\Temp (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Temp`) }},
+					// ==================== EXTRAS ====================
+					{desc: "\\Prefetch (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Prefetch`) }},
+					{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
 				}
 			}
 
-		default: // Linux / Unix-like
+		// ==================== LINUX CLEANUP ==================== //
+		default: // Linux
 			switch mode {
 			default:
 				tasks = []task{
-					// Linux Safe Cleanup
-					// Basic
-					{"Cleaning System Logs (older than 90 days)", []string{"journalctl", "--vacuum-time=90d"}},
-					// Extra
-					{"Cleaning Apt Cache", []string{"sudo", "apt-get", "clean"}},
-					{"Cleaning Flatpak Cache", []string{"flatpak", "uninstall", "--unused", "-y"}},
-					{"Cleaning Pip Cache", []string{"pip", "cache", "purge"}},
-					{"Cleaning Npm Cache", []string{"npm", "cache", "clean", "--force"}},
-					{"Cleaning Yarn Cache", []string{"yarn", "cache", "clean"}},
-					{"Cleaning Snap Cache", []string{"sudo", "rm", "-rf", "/var/cache/snapd/*"}},
-					{"Cleaning DNF Cache", []string{"sh", "-c", "rm -rf /var/cache/dnf/*"}},
-					{"Cleaning Pacman Cache", []string{"sh", "-c", "rm -rf /var/cache/pacman/pkg/*"}},
+					//   ==================== LINUX SAFE-CLEANUP ====================
+					//   ==================== BASICS ====================
+					{desc: "Journal Logs older than 90 days (shell)", cmd: []string{"journalctl", "--vacuum-time=90d"}},
+					{desc: "System Logs older than 90 days (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +90 -exec rm -f {} +"}},
+					// ==================== EXTRAS ====================
+					{desc: "Apt Cache (shell)", cmd: []string{"sudo", "apt-get", "clean"}},
+					{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
+					{desc: "/var/cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
+					{desc: "Pacman Cache (shell)", cmd: []string{"sudo", "pacman", "-Scc", "--noconfirm"}},
+					{desc: "DNS Cache (shell)", cmd: []string{"sudo", "systemd-resolve", "--flush-caches"}},
 				}
 			case "full":
 				tasks = []task{
-					// Linux Full Cleanup
-					// Basic
-					{"Cleaning Thumbnail Cache", []string{"sh", "-c", "rm -rf ~/.cache/thumbnails/*"}},
-					{"Cleaning System Logs (all)", []string{"sh", "-c", "rm -rf /var/log/journal/*"}},
-					{"Cleaning Trash", []string{"sh", "-c", "rm -rf ~/.local/share/Trash/*"}},
-					{"Cleaning Temp Files", []string{"sh", "-c", "rm -rf /tmp/*"}},
-					{"Cleaning Var Temp Files", []string{"sh", "-c", "rm -rf /var/tmp/*"}},
-					// Extra
-					{"Cleaning Apt Cache", []string{"sudo", "apt-get", "clean"}},
-					{"Cleaning Flatpak Cache", []string{"flatpak", "uninstall", "--unused", "-y"}},
-					{"Cleaning Pip Cache", []string{"pip", "cache", "purge"}},
-					{"Cleaning Npm Cache", []string{"npm", "cache", "clean", "--force"}},
-					{"Cleaning Yarn Cache", []string{"yarn", "cache", "clean"}},
-					{"Cleaning Snap Cache", []string{"sudo", "rm", "-rf", "/var/cache/snapd/*"}},
-					{"Cleaning DNF Cache", []string{"sh", "-c", "rm -rf /var/cache/dnf/*"}},
-					{"Cleaning Pacman Cache", []string{"sh", "-c", "rm -rf /var/cache/pacman/pkg/*"}},
-					{"Running Nix Garbage Collector", []string{"nix-collect-garbage", "-d"}},
+					//   ==================== LINUX FULL-CLEANUP ====================
+					//   ==================== BASICS ====================
+					{desc: "/tmp (build-in)", goFunc: func() error { return cleanFolder("/tmp") }},
+					{desc: "/var/tmp (build-in)", goFunc: func() error { return cleanFolder("/var/tmp") }},
+					{desc: "/var/log/journal (build-in)", goFunc: func() error { return cleanFolder("/var/log/journal") }},
+					{desc: "System Logs older than 10 days (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +9 -exec rm -f {} +"}},
+					{desc: "Trash (~/.local/share/Trash) (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
+					// ==================== EXTRAS ====================
+					{desc: "Apt Cache (shell)", cmd: []string{"sudo", "apt-get", "clean"}},
+					{desc: "DNS Cache (shell)", cmd: []string{"sudo", "systemd-resolve", "--flush-caches"}},
+					{desc: "Pip Cache (shell)", cmd: []string{"pip", "cache", "purge"}},
+					{desc: "Npm Cache (shell)", cmd: []string{"npm", "cache", "clean", "--force"}},
+					{desc: "Yarn Cache (shell)", cmd: []string{"yarn", "cache", "clean"}},
+					{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
+					{desc: "/var/cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
+					{desc: "DNF Cache (shell)", cmd: []string{"sudo", "dnf", "clean", "all"}},
+					{desc: "Pacman Cache (shell)", cmd: []string{"sudo", "pacman", "-Scc", "--noconfirm"}},
+					{desc: "Nix Garbage Collector (shell)", cmd: []string{"nix-collect-garbage", "-d"}},
+					{desc: "Composer Cache (shell)", cmd: []string{"composer", "clear-cache"}},
+					{desc: "Go Module Cache (shell)", cmd: []string{"go", "clean", "-modcache"}},
+					{desc: "Rust Cargo Cache (shell)", cmd: []string{"cargo", "clean"}},
 				}
 			}
 		}
@@ -198,10 +227,15 @@ func cleanup(mode string, username ...string) {
 	// Preview what will be executed
 	printInfo("The following cleanup tasks will be executed:")
 	for _, t := range tasks {
-		fmt.Printf("%s- %s%s\n  → %s\n", CYAN, t.desc, RC, strings.Join(t.cmd, " "))
+		cmdStr := strings.Join(t.cmd, " ")
+		if t.goFunc != nil && cmdStr == "" {
+			cmdStr = "(build-in)"
+		}
+		fmt.Printf("%s- Cleaning: %s%s\n  → %s\n", CYAN, t.desc, RC, cmdStr)
 	}
 	fmt.Printf("\n")
 	printInfo("The above cleanup tasks will be executed")
+	printInfo("Press [CTRL+C] to cancel")
 	printInfo("!!! You use this tool at your own risk !!!")
 	if !skipPause {
 		pause()
@@ -215,19 +249,19 @@ func cleanup(mode string, username ...string) {
 	startFree := getFreeMB()
 	for _, t := range tasks {
 		ctx, cancel := context.WithCancel(context.Background())
-		go asyncSpinner(ctx, "- "+t.desc)
-		time.Sleep(CMDWAIT)
+		go asyncSpinner(ctx, "-"+" Cleaning: "+t.desc)
+		time.Sleep(CMDWAIT) // A little pause to actually see what the hell is going on
 
-		_, err := runCommand(t.cmd)
+		if t.goFunc != nil {
+			_ = t.goFunc() // Execute Go cleanup
+		} else if len(t.cmd) > 0 {
+			_, _ = runCommand(t.cmd) // Execute cmd command
+		}
 		cancel()
 		fmt.Printf("\r\033[2K") // Clear spinner line
 
-		if err != nil {
-			printTask(t.desc + " FINISHED*")
-		} else {
-			printTask(t.desc + " FINISHED")
-		}
-		time.Sleep(200 * time.Millisecond)
+		// NO error printing because literally every command fails for any reason
+		printTask("Cleaning: " + t.desc + " FINISHED*")
 	}
 	endFree := getFreeMB()
 	diff := endFree - startFree

@@ -97,6 +97,7 @@ func runCommand(cmd []string) (string, error) {
 	return out, nil
 }
 
+// clearScreen clears the terminal screen for neat output
 func clearScreen() {
 	var cmd *exec.Cmd
 	if goos == "windows" {
@@ -113,7 +114,7 @@ func clearScreen() {
 	}
 }
 
-// getDiskInfo returns (total, free) disk space as human-readable strings
+// getDiskInfo returns total and free disk space as human-readable strings
 func getDiskInfo() (string, string) {
 	var diskTotal, diskFree string
 

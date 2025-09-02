@@ -32,17 +32,18 @@ const (
 )
 
 var (
-	consoleRunning  = true
-	selectedProfile = ""
-	skipPause       = false
-	goos            = runtime.GOOS
+	consoleRunning  = true         // Controls main loop
+	selectedProfile = ""           // Username for user cleanup
+	skipPause       = false        // If true, skip pause
+	goos            = runtime.GOOS // Current OS
 	reader          = bufio.NewReader(os.Stdin)
-	//SPINNERFRAMES  = []rune{'⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'}
-	SPINNERFRAMES = []rune{'|', '/', '-', '\\'}
+	//SPINNERFRAMES  = []rune{'⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'} // Spinner animation frames
+	SPINNERFRAMES = []rune{'|', '/', '-', '\\'} // Spinner animation frames
 )
 
 func startup() {
 	switch goos {
+	// WINDOWS
 	case "windows":
 		// Try running a command that requires admin rights
 		cmd := exec.Command("net", "session")
@@ -66,8 +67,8 @@ func startup() {
 				os.Exit(0)
 			}
 		}
-
-	default: // Unix-like systems
+	// LINUX
+	default:
 		if os.Geteuid() != 0 { // Check if current user is not root
 			printInfo("Requesting root privileges...\n")
 
@@ -206,7 +207,6 @@ func main() {
 		cmd, _ := reader.ReadString('\n')
 		cmd = strings.TrimSpace(cmd)
 		cmdline()
-
 		switch cmd {
 		// FULL CLEAN
 		case "full clean", "full cleanup", "clean full", "cleanup full":
@@ -266,10 +266,8 @@ https://github.com/Knuspii/crunchycleaner
 		// DEFAULT
 		case "":
 			printInfo("Input a command")
-			pause()
 		default:
 			printInfo("Invalid command: " + cmd)
-			pause()
 		}
 	}
 	pause()
