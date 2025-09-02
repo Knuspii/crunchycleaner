@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	CC_VERSION = "0.3"
+	CC_VERSION = "0.4"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 2 * time.Second        // Wait time running a command
@@ -141,9 +141,9 @@ func showBanner() {
 
 func showCommands() {
 	fmt.Printf("Commands:\n")
-	fmt.Printf(" %s[full clean]%s - Does a Full-Cleanup\n", YELLOW, RC)
-	fmt.Printf(" %s[safe clean]%s - Does a Safe-Cleanup\n", YELLOW, RC)
-	fmt.Printf(" %s[user clean]%s - Does a User-Cleanup\n", YELLOW, RC)
+	fmt.Printf(" %s[fullclean]%s - Does a Full-Cleanup\n", YELLOW, RC)
+	fmt.Printf(" %s[safeclean]%s - Does a Safe-Cleanup\n", YELLOW, RC)
+	fmt.Printf(" %s[userclean]%s - Does a User-Cleanup\n", YELLOW, RC)
 	fmt.Printf(" %s[info]%s       - Shows some infos\n", YELLOW, RC)
 	fmt.Printf(" %s[reset]%s      - Reset the TUI\n", YELLOW, RC)
 	fmt.Printf(" %s[exit]%s       - Exit\n", RED, RC)
@@ -209,17 +209,17 @@ func main() {
 		cmdline()
 		switch cmd {
 		// FULL CLEAN
-		case "full clean", "full cleanup", "clean full", "cleanup full":
+		case "fullclean", ",full clean", "full cleanup", "clean full", "cleanup full":
 			cleanup("full")
 			consoleRunning = false
 
 		// SAFE CLEAN
-		case "safe clean", "safe cleanup", "clean safe", "cleanup safe":
+		case "safeclean", "safe clean", "safe cleanup", "clean safe", "cleanup safe":
 			cleanup("safe")
 			consoleRunning = false
 
 		// USER CLEAN
-		case "user clean", "user cleanup", "clean user", "cleanup user":
+		case "userclean", "user clean", "user cleanup", "clean user", "cleanup user":
 			cleanup("user")
 			consoleRunning = false
 
@@ -235,8 +235,7 @@ func main() {
 DISCLAIMER:
 MADE BY: Knuspii, (M)
 Help by the World Wide Web.
-Made with: Go, Bash, Powershell
-Simple program with various functions.
+A lightweight, cross-platform system cleanup tool.
 You use this tool at your own risk.
 I do not take any responsibilities.
 https://github.com/Knuspii/crunchycleaner

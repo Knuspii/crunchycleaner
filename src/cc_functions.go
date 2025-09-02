@@ -59,7 +59,7 @@ func asyncSpinner(ctx context.Context, text string) {
 			// YELLOW/RC -> Apply color and reset
 			// text      -> Custom text passed to the spinner
 			// SPINNERFRAMES[i%len(SPINNERFRAMES)] -> Rotate through spinner characters
-			fmt.Printf("\r%s[LOADING]%s %s %c  ", YELLOW, RC, text, SPINNERFRAMES[i%len(SPINNERFRAMES)])
+			fmt.Printf("\r%s[LOADING]%s %s %s%c%s  ", YELLOW, RC, text, CYAN, SPINNERFRAMES[i%len(SPINNERFRAMES)], RC)
 			time.Sleep(100 * time.Millisecond) // Wait a short time before next frame
 			i++                                // Move to the next spinner frame
 		}

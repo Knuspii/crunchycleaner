@@ -124,10 +124,9 @@ func cleanup(mode string, username ...string) {
 			userPath := os.Getenv("SystemDrive") + `\Users\` + selectedProfile
 			tasks = []task{
 				// ==================== WINDOWS USER-CLEANUP ====================
-				{desc: userPath + "\\AppData\\Local\\Microsoft\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Microsoft\Windows\Explorer`) }},
-				{desc: userPath + "\\AppData\\Local\\Temp (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Temp`) }},
-				{desc: "Recycle Bin for " + selectedProfile + " (shell)", cmd: []string{
-					"powershell",
+				{desc: "\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Microsoft\Windows\Explorer`) }},
+				{desc: "\\...\\Local\\Temp (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Temp`) }},
+				{desc: "Recycle Bin (shell)", cmd: []string{"powershell",
 					`$userSID = (New-Object System.Security.Principal.NTAccount("` + selectedProfile + `")).Translate([System.Security.Principal.SecurityIdentifier]).Value;`,
 					`Remove-Item "C:\$Recycle.Bin\$userSID\*" -Recurse -Force`,
 				}},
@@ -136,10 +135,9 @@ func cleanup(mode string, username ...string) {
 			userPath := "/home/" + selectedProfile
 			tasks = []task{
 				// ==================== LINUX USER-CLEANUP ====================
-				{desc: userPath + "/.local/share/Trash (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.local/share/Trash") }},
-				{desc: userPath + "/.cache/thumbnails (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache/thumbnails") }},
-				{desc: userPath + "/.cache (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache") }},
-				{desc: userPath + "/.thumbnails (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.thumbnails") }},
+				{desc: "/.../share/Trash (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.local/share/Trash") }},
+				{desc: "/.cache (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache") }},
+				{desc: "/.thumbnails (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.thumbnails") }},
 			}
 		}
 	// ==================== SYSTEM CLEANUP ==================== //
@@ -152,10 +150,10 @@ func cleanup(mode string, username ...string) {
 				tasks = []task{
 					// ==================== WINDOWS SAFE-CLEANUP ====================
 					// ==================== BASICS ====================
-					{desc: "\\Microsoft\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
-					{desc: "\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
+					{desc: "\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
+					{desc: "\\...\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
 					{desc: "%TEMP% (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
-					{desc: "Windows Event Logs older than 90 days (shell)", cmd: []string{"powershell", "Get-EventLog -LogName * | Where-Object {$_.TimeGenerated -lt (Get-Date).AddDays(-90)} | ForEach-Object { Clear-EventLog -LogName $_.Log }"}},
+					{desc: "Windows Event Logs (90 days) (shell)", cmd: []string{"powershell", "Get-EventLog -LogName * | Where-Object {$_.TimeGenerated -lt (Get-Date).AddDays(-90)} | ForEach-Object { Clear-EventLog -LogName $_.Log }"}},
 					// ==================== EXTRAS ====================
 					{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
 				}
@@ -163,19 +161,18 @@ func cleanup(mode string, username ...string) {
 				tasks = []task{
 					// ==================== WINDOWS FULL-CLEANUP ====================
 					// ==================== BASICS ====================
-					{desc: "\\Microsoft\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
-					{desc: "\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
+					{desc: "\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
+					{desc: "\\...\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
 					{desc: "%TEMP% (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
 					{desc: "Recycle Bin (shell)", cmd: []string{"powershell", "Clear-RecycleBin -Force -Confirm:$false"}},
-					{desc: "Windows Event Logs older than 10 days (shell)", cmd: []string{"powershell", "Get-EventLog -LogName * | Where-Object {$_.TimeGenerated -lt (Get-Date).AddDays(-30)} | ForEach-Object { Clear-EventLog -LogName $_.Log }"}},
+					{desc: "Windows Event Logs (10 days) (shell)", cmd: []string{"powershell", "Get-EventLog -LogName * | Where-Object {$_.TimeGenerated -lt (Get-Date).AddDays(-30)} | ForEach-Object { Clear-EventLog -LogName $_.Log }"}},
 					{desc: "Windows Update Cache (shell)", cmd: []string{"powershell", "Remove-Item -Path $env:SystemRoot\\SoftwareDistribution\\Download\\* -Recurse -Force"}},
-					{desc: "\\System32\\winevt\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\winevt\Logs`) }},
-					{desc: "\\Microsoft\\Windows\\Recent (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("APPDATA") + `\Microsoft\Windows\Recent`) }},
-					{desc: "\\Microsoft\\Windows\\WindowsUpdate\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`) }},
-					{desc: "\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Logs`) }},
-					{desc: "\\Temp (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Temp`) }},
+					{desc: "\\...\\winevt\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\winevt\Logs`) }},
+					{desc: "\\...\\WindowsUpdate\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`) }},
+					{desc: "\\...\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Logs`) }},
+					{desc: "\\...\\Temp (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Temp`) }},
 					// ==================== EXTRAS ====================
-					{desc: "\\Prefetch (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Prefetch`) }},
+					{desc: "\\...\\Prefetch (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Prefetch`) }},
 					{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
 				}
 			}
@@ -187,12 +184,12 @@ func cleanup(mode string, username ...string) {
 				tasks = []task{
 					//   ==================== LINUX SAFE-CLEANUP ====================
 					//   ==================== BASICS ====================
-					{desc: "Journal Logs older than 90 days (shell)", cmd: []string{"journalctl", "--vacuum-time=90d"}},
-					{desc: "System Logs older than 90 days (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +90 -exec rm -f {} +"}},
+					{desc: "Journal Logs (90 days) (shell)", cmd: []string{"journalctl", "--vacuum-time=90d"}},
+					{desc: "System Logs (90 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +90 -exec rm -f {} +"}},
 					// ==================== EXTRAS ====================
+					{desc: "/var/cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
 					{desc: "Apt Cache (shell)", cmd: []string{"sudo", "apt-get", "clean"}},
 					{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
-					{desc: "/var/cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
 					{desc: "Pacman Cache (shell)", cmd: []string{"sudo", "pacman", "-Scc", "--noconfirm"}},
 					{desc: "DNS Cache (shell)", cmd: []string{"sudo", "systemd-resolve", "--flush-caches"}},
 				}
@@ -202,17 +199,17 @@ func cleanup(mode string, username ...string) {
 					//   ==================== BASICS ====================
 					{desc: "/tmp (build-in)", goFunc: func() error { return cleanFolder("/tmp") }},
 					{desc: "/var/tmp (build-in)", goFunc: func() error { return cleanFolder("/var/tmp") }},
-					{desc: "/var/log/journal (build-in)", goFunc: func() error { return cleanFolder("/var/log/journal") }},
-					{desc: "System Logs older than 10 days (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +9 -exec rm -f {} +"}},
-					{desc: "Trash (~/.local/share/Trash) (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
+					{desc: "/.../log/journal (build-in)", goFunc: func() error { return cleanFolder("/var/log/journal") }},
+					{desc: "System Logs (10 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
+					{desc: "/.../share/Trash) (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
 					// ==================== EXTRAS ====================
+					{desc: "/.../cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
 					{desc: "Apt Cache (shell)", cmd: []string{"sudo", "apt-get", "clean"}},
 					{desc: "DNS Cache (shell)", cmd: []string{"sudo", "systemd-resolve", "--flush-caches"}},
 					{desc: "Pip Cache (shell)", cmd: []string{"pip", "cache", "purge"}},
 					{desc: "Npm Cache (shell)", cmd: []string{"npm", "cache", "clean", "--force"}},
 					{desc: "Yarn Cache (shell)", cmd: []string{"yarn", "cache", "clean"}},
 					{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
-					{desc: "/var/cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
 					{desc: "DNF Cache (shell)", cmd: []string{"sudo", "dnf", "clean", "all"}},
 					{desc: "Pacman Cache (shell)", cmd: []string{"sudo", "pacman", "-Scc", "--noconfirm"}},
 					{desc: "Nix Garbage Collector (shell)", cmd: []string{"nix-collect-garbage", "-d"}},
@@ -249,7 +246,7 @@ func cleanup(mode string, username ...string) {
 	startFree := getFreeMB()
 	for _, t := range tasks {
 		ctx, cancel := context.WithCancel(context.Background())
-		go asyncSpinner(ctx, "-"+" Cleaning: "+t.desc)
+		go asyncSpinner(ctx, "Cleaning: "+t.desc)
 		time.Sleep(CMDWAIT) // A little pause to actually see what the hell is going on
 
 		if t.goFunc != nil {
@@ -260,7 +257,7 @@ func cleanup(mode string, username ...string) {
 		cancel()
 		fmt.Printf("\r\033[2K") // Clear spinner line
 
-		// NO error printing because literally every command fails for any reason
+		// NO error printing because literally every command fails for any reason and will print out a 500 line long error log
 		printTask("Cleaning: " + t.desc + " FINISHED*")
 	}
 	endFree := getFreeMB()
