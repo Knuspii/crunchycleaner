@@ -45,8 +45,8 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 ---
 
 ## 📥 Download and install as command:
-- Open your terminal and input this command based on your operating system.\
-- **You need root/admin privileges!**\
+- Open your terminal and input this command based on your operating system.
+- **You need root/admin privileges!**
 
 **Linux:**
 ```
