@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	CC_VERSION = "0.5"
+	CC_VERSION = "0.7"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command
@@ -32,8 +32,8 @@ const (
 )
 
 var (
-	consoleRunning  = true // Controls main loop
-	verbose         = false
+	consoleRunning  = true         // Controls main loop
+	verbose         = false        // If true, print all errors
 	selectedProfile = ""           // Username for user cleanup
 	skipPause       = false        // If true, skip pause
 	goos            = runtime.GOOS // Current OS
@@ -175,35 +175,52 @@ func usage() {
 	fmt.Printf("Usage:\n")
 	fmt.Printf("  %scrunchycleaner [option]%s\n\n", CYAN, RC)
 	fmt.Printf("Options:\n")
-	fmt.Printf("  %sNo option%s   Run with TUI (Text-UI)\n", YELLOW, RC)
-	fmt.Printf("  %s-s%s          Run Safe-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-f%s          Run Full-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-u {user}%s   Run User-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-v%s          Show version\n", YELLOW, RC)
-	fmt.Printf("  %s-h%s          Show this help page\n", YELLOW, RC)
+	fmt.Printf("  %sNo option%s     Run with TUI (Text-UI)\n", YELLOW, RC)
+	fmt.Printf("  %s-t%s            Run with TUI (Text-UI)\n", YELLOW, RC)
+	fmt.Printf("  %s-s%s            Run Safe-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-sy%s           Run Safe-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-f%s            Run Full-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-fy%s           Run Full-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-u [<user>]}%s  Run User-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-uy [<user>]%s  Run User-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-v%s            Show version\n", YELLOW, RC)
+	fmt.Printf("  %s-h%s            Show this help page\n", YELLOW, RC)
 }
 
 func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
+		// Safe-Cleanup
 		case "-s":
 			adminCheck()
-			skipPause = true
-			verbose = true
 			showBanner()
 			cleanup("safe")
 			os.Exit(0)
-		case "-f":
-			adminCheck()
+		// Safe-Cleanup (non-interactive)
+		case "-sy":
 			skipPause = true
 			verbose = true
+			adminCheck()
+			showBanner()
+			cleanup("safe")
+			os.Exit(0)
+		// Full-Cleanup
+		case "-f":
+			adminCheck()
 			showBanner()
 			cleanup("full")
 			os.Exit(0)
-		case "-u":
-			adminCheck()
+		// Full-Cleanup (non-interactive)
+		case "-fy":
 			skipPause = true
 			verbose = true
+			adminCheck()
+			showBanner()
+			cleanup("full")
+			os.Exit(0)
+		// User-Cleanup
+		case "-u":
+			adminCheck()
 			if len(os.Args) > 2 {
 				showBanner()
 				cleanup("user", os.Args[2])
@@ -212,13 +229,30 @@ func main() {
 				os.Exit(1)
 			}
 			os.Exit(0)
+		// User-Cleanup (non-interactive)
+		case "-uy":
+			skipPause = true
+			verbose = true
+			adminCheck()
+			if len(os.Args) > 2 {
+				showBanner()
+				cleanup("user", os.Args[2])
+			} else {
+				printError("No profile name provided")
+				os.Exit(1)
+			}
+		// Help
 		case "-h", "--help":
 			showBanner()
 			usage()
 			os.Exit(0)
+		// Version
 		case "-v", "--version":
 			fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
 			os.Exit(0)
+		// TUI
+		case "-t":
+			// Just continue to TUI
 		default:
 			fmt.Printf("Unknown option: %s\n", os.Args[1])
 			usage()
@@ -258,7 +292,9 @@ func main() {
 
 		// INFO
 		case "i", "info", "infos", "about", "version":
-			fmt.Printf(`CrunchyCleaner Version: %s
+			usage()
+			fmt.Printf(`
+%sCrunchyCleaner Version: %s%s
 
 DISCLAIMER:
 MADE BY: Knuspii, (M)
@@ -267,7 +303,7 @@ A lightweight, cross-platform system cleanup tool.
 You use this tool at your own risk.
 I do not take any responsibilities.
 https://github.com/Knuspii/crunchycleaner
-`, CC_VERSION)
+`, YELLOW, CC_VERSION, RC)
 			consoleRunning = false
 
 		// RESET
