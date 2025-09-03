@@ -126,16 +126,16 @@ func cleanup(mode string, username ...string) {
 				// ==================== WINDOWS USER-CLEANUP ====================
 				{desc: "\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Microsoft\Windows\Explorer`) }},
 				{desc: "\\...\\Local\\Temp (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Temp`) }},
-				{desc: "Recycle Bin (shell)", cmd: []string{"powershell",
+				/*{desc: "Recycle Bin (shell)", cmd: []string{"powershell",
 					`$userSID = (New-Object System.Security.Principal.NTAccount("` + selectedProfile + `")).Translate([System.Security.Principal.SecurityIdentifier]).Value;`,
 					`Remove-Item "C:\$Recycle.Bin\$userSID\*" -Recurse -Force`,
-				}},
+				}},*/
 			}
 		default:
 			userPath := "/home/" + selectedProfile
 			tasks = []task{
 				// ==================== LINUX USER-CLEANUP ====================
-				{desc: "/.../share/Trash (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.local/share/Trash") }},
+				//{desc: "/.../share/Trash (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.local/share/Trash") }},
 				{desc: "/.cache (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache") }},
 				{desc: "/.thumbnails (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.thumbnails") }},
 			}
@@ -164,7 +164,7 @@ func cleanup(mode string, username ...string) {
 					{desc: "\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
 					{desc: "\\...\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
 					{desc: "%TEMP% (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
-					{desc: "Recycle Bin (shell)", cmd: []string{"powershell", "Clear-RecycleBin -Force -Confirm:$false"}},
+					{desc: "C:\\$Recycle.Bin (build-in)", goFunc: func() error { return cleanFolder(`C:\$Recycle.Bin`) }},
 					{desc: "Windows Event Logs (10 days) (shell)", cmd: []string{"powershell", "Get-EventLog -LogName * | Where-Object {$_.TimeGenerated -lt (Get-Date).AddDays(-30)} | ForEach-Object { Clear-EventLog -LogName $_.Log }"}},
 					{desc: "Windows Update Cache (shell)", cmd: []string{"powershell", "Remove-Item -Path $env:SystemRoot\\SoftwareDistribution\\Download\\* -Recurse -Force"}},
 					{desc: "\\...\\winevt\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\winevt\Logs`) }},
@@ -184,28 +184,28 @@ func cleanup(mode string, username ...string) {
 				tasks = []task{
 					//   ==================== LINUX SAFE-CLEANUP ====================
 					//   ==================== BASICS ====================
+					{desc: "/tmp (build-in)", goFunc: func() error { return cleanFolder("/tmp") }},
 					{desc: "Journal Logs (90 days) (shell)", cmd: []string{"journalctl", "--vacuum-time=90d"}},
 					{desc: "System Logs (90 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +90 -exec rm -f {} +"}},
 					// ==================== EXTRAS ====================
-					{desc: "/var/cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
-					{desc: "Apt Cache (shell)", cmd: []string{"sudo", "apt-get", "clean"}},
+					{desc: "Apt Cache (shell)", cmd: []string{"apt-get", "clean"}},
 					{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
-					{desc: "Pacman Cache (shell)", cmd: []string{"sudo", "pacman", "-Scc", "--noconfirm"}},
-					{desc: "DNS Cache (shell)", cmd: []string{"sudo", "systemd-resolve", "--flush-caches"}},
+					{desc: "Pacman Cache (shell)", cmd: []string{"pacman", "-Scc", "--noconfirm"}},
+					{desc: "DNS Cache (shell)", cmd: []string{"systemd-resolve", "--flush-caches"}},
 				}
 			case "full":
 				tasks = []task{
 					//   ==================== LINUX FULL-CLEANUP ====================
 					//   ==================== BASICS ====================
 					{desc: "/tmp (build-in)", goFunc: func() error { return cleanFolder("/tmp") }},
-					{desc: "/var/tmp (build-in)", goFunc: func() error { return cleanFolder("/var/tmp") }},
-					{desc: "/.../log/journal (build-in)", goFunc: func() error { return cleanFolder("/var/log/journal") }},
-					{desc: "System Logs (10 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
 					{desc: "/.../share/Trash) (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
+					{desc: "/var/tmp (files) (shell)", cmd: []string{"sh", "-c", "find /var/tmp -type f -delete"}},
+					{desc: "/var/cache (files) (shell)", cmd: []string{"sh", "-c", "find /var/cache -type f -delete"}},
+					{desc: "System Logs (10 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
 					// ==================== EXTRAS ====================
-					{desc: "/.../cache/snapd (build-in)", goFunc: func() error { return cleanFolder("/var/cache/snapd") }},
-					{desc: "Apt Cache (shell)", cmd: []string{"sudo", "apt-get", "clean"}},
-					{desc: "DNS Cache (shell)", cmd: []string{"sudo", "systemd-resolve", "--flush-caches"}},
+					{desc: "fc-cache (shell)", cmd: []string{"fc-cache", "-fr"}},
+					{desc: "Apt Cache (shell)", cmd: []string{"apt-get", "clean"}},
+					{desc: "DNS Cache (shell)", cmd: []string{"systemd-resolve", "--flush-caches"}},
 					{desc: "Pip Cache (shell)", cmd: []string{"pip", "cache", "purge"}},
 					{desc: "Npm Cache (shell)", cmd: []string{"npm", "cache", "clean", "--force"}},
 					{desc: "Yarn Cache (shell)", cmd: []string{"yarn", "cache", "clean"}},
@@ -221,6 +221,16 @@ func cleanup(mode string, username ...string) {
 		}
 	}
 
+	// Ask user if verbose logging should be enabled
+	if !skipPause {
+		fmt.Print("Enable verbose logging? (yes/NO): ")
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(strings.ToLower(choice))
+		if choice == "y" || choice == "yes" {
+			verbose = true
+		}
+	}
+
 	// Preview what will be executed
 	printInfo("The following cleanup tasks will be executed:")
 	for _, t := range tasks {
@@ -232,14 +242,19 @@ func cleanup(mode string, username ...string) {
 	}
 	fmt.Printf("\n")
 	printInfo("The above cleanup tasks will be executed")
+	if verbose {
+		printInfo("Verbose mode: showing all task details and errors")
+	} else {
+		printInfo("Verbose mode OFF: errors will be hidden")
+	}
 	printInfo("Press [CTRL+C] to cancel")
 	printInfo("!!! You use this tool at your own risk !!!")
 	if !skipPause {
 		pause()
 	}
 
-	fmt.Printf("%s##############################%s\n", RED, RC)
-	printInfo("*** Cleanup STARTED ***\n")
+	fmt.Printf("%s#############################################%s\n", RED, RC)
+	printInfo("*** CrunchyCleaner Cleanup STARTED ***\n")
 	time.Sleep(2 * time.Second)
 
 	// Execute all tasks
@@ -249,22 +264,26 @@ func cleanup(mode string, username ...string) {
 		go asyncSpinner(ctx, "Cleaning: "+t.desc)
 		time.Sleep(CMDWAIT) // A little pause to actually see what the hell is going on
 
+		var err error
 		if t.goFunc != nil {
 			_ = t.goFunc() // Execute Go cleanup
 		} else if len(t.cmd) > 0 {
-			_, _ = runCommand(t.cmd) // Execute cmd command
+			_, err = runCommand(t.cmd) // Execute cmd command
 		}
 		cancel()
 		fmt.Printf("\r\033[2K") // Clear spinner line
 
-		// NO error printing because literally every command fails for any reason and will print out a 500 line long error log
-		printTask("Cleaning: " + t.desc + " FINISHED*")
+		if verbose && err != nil {
+			fmt.Printf("%sCleaning: %s%s FINISHED\n  → %s\n", CYAN, t.desc, RC, err)
+		} else {
+			fmt.Printf("%sCleaning: %s%s FINISHED\n", CYAN, t.desc, RC)
+		}
 	}
 	endFree := getFreeMB()
 	diff := endFree - startFree
 	if diff < 0 {
 		diff = 0
 	}
-	printInfo(fmt.Sprintf("Cleaned approx %s%d MB%s disk space", YELLOW, diff, RC))
-	printSuccess("*** Cleanup FINISHED ***")
+	printInfo(fmt.Sprintf("Cleaned approx: %s%d MB%s disk space", YELLOW, diff, RC))
+	printSuccess("*** CrunchyCleaner Cleanup FINISHED ***")
 }

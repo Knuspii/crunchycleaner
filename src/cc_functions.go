@@ -1,4 +1,4 @@
-// CrunchyCleaner: Other Functions
+// CrunchyCleaner: Helper Functions
 
 package main
 
@@ -54,12 +54,12 @@ func asyncSpinner(ctx context.Context, text string) {
 		// Default case: continue spinning
 		default:
 			// Print spinner line:
-			// \r       -> Carriage return to overwrite the same line
+			// \r        -> Carriage return to overwrite the same line
 			// [LOADING] -> Static label
 			// YELLOW/RC -> Apply color and reset
 			// text      -> Custom text passed to the spinner
 			// SPINNERFRAMES[i%len(SPINNERFRAMES)] -> Rotate through spinner characters
-			fmt.Printf("\r%s[LOADING]%s %s %s%c%s  ", YELLOW, RC, text, CYAN, SPINNERFRAMES[i%len(SPINNERFRAMES)], RC)
+			fmt.Printf("\r%s[LOADING]%s %s %s%c%s  ", YELLOW, RC, text, YELLOW, SPINNERFRAMES[i%len(SPINNERFRAMES)], RC)
 			time.Sleep(100 * time.Millisecond) // Wait a short time before next frame
 			i++                                // Move to the next spinner frame
 		}

@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	CC_VERSION = "0.4"
+	CC_VERSION = "0.5"
 	COLS       = 62
 	LINES      = 30
-	CMDWAIT    = 2 * time.Second        // Wait time running a command
+	CMDWAIT    = 1 * time.Second        // Wait time running a command
 	PROMPT     = (YELLOW + " >>:" + RC) // Prompt string displayed to the user
 	RED        = "\033[31m"
 	YELLOW     = "\033[33m"
@@ -32,7 +32,8 @@ const (
 )
 
 var (
-	consoleRunning  = true         // Controls main loop
+	consoleRunning  = true // Controls main loop
+	verbose         = false
 	selectedProfile = ""           // Username for user cleanup
 	skipPause       = false        // If true, skip pause
 	goos            = runtime.GOOS // Current OS
@@ -41,11 +42,29 @@ var (
 	SPINNERFRAMES = []rune{'|', '/', '-', '\\'} // Spinner animation frames
 )
 
-func startup() {
+func adminCheck() {
 	switch goos {
 	// WINDOWS
 	case "windows":
 		// Try running a command that requires admin rights
+		cmd := exec.Command("net", "session")
+		if err := cmd.Run(); err != nil {
+			printError("You need admin privileges")
+			os.Exit(1)
+		}
+	default:
+		if os.Geteuid() != 0 { // Check if current user is not root
+			printError("You need root privileges")
+			os.Exit(1)
+		}
+	}
+}
+
+func getAdmin() {
+	switch goos {
+	// WINDOWS
+	case "windows":
+		// Try running a command that requires admin privileges
 		cmd := exec.Command("net", "session")
 		if err := cmd.Run(); err != nil {
 			// If it fails, try to restart the program as admin
@@ -101,7 +120,9 @@ func startup() {
 			}
 		}
 	}
+}
 
+func init_term() {
 	switch goos {
 	case "windows":
 		// Set PowerShell window size and buffer
@@ -144,9 +165,9 @@ func showCommands() {
 	fmt.Printf(" %s[fullclean]%s - Does a Full-Cleanup\n", YELLOW, RC)
 	fmt.Printf(" %s[safeclean]%s - Does a Safe-Cleanup\n", YELLOW, RC)
 	fmt.Printf(" %s[userclean]%s - Does a User-Cleanup\n", YELLOW, RC)
-	fmt.Printf(" %s[info]%s       - Shows some infos\n", YELLOW, RC)
-	fmt.Printf(" %s[reset]%s      - Reset the TUI\n", YELLOW, RC)
-	fmt.Printf(" %s[exit]%s       - Exit\n", RED, RC)
+	fmt.Printf(" %s[info]%s      - Shows some infos\n", YELLOW, RC)
+	fmt.Printf(" %s[reset]%s     - Reset the TUI\n", YELLOW, RC)
+	fmt.Printf(" %s[exit]%s      - Exit\n", RED, RC)
 	line()
 }
 
@@ -154,11 +175,11 @@ func usage() {
 	fmt.Printf("Usage:\n")
 	fmt.Printf("  %scrunchycleaner [option]%s\n\n", CYAN, RC)
 	fmt.Printf("Options:\n")
-	fmt.Printf("  %sNo option%s   Run with TUI\n", YELLOW, RC)
+	fmt.Printf("  %sNo option%s   Run with TUI (Text-UI)\n", YELLOW, RC)
 	fmt.Printf("  %s-s%s          Run Safe-Cleanup\n", YELLOW, RC)
 	fmt.Printf("  %s-f%s          Run Full-Cleanup\n", YELLOW, RC)
 	fmt.Printf("  %s-u {user}%s   Run User-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-f%s          Show version\n", YELLOW, RC)
+	fmt.Printf("  %s-v%s          Show version\n", YELLOW, RC)
 	fmt.Printf("  %s-h%s          Show this help page\n", YELLOW, RC)
 }
 
@@ -166,17 +187,23 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "-s":
+			adminCheck()
 			skipPause = true
+			verbose = true
 			showBanner()
 			cleanup("safe")
 			os.Exit(0)
 		case "-f":
+			adminCheck()
 			skipPause = true
+			verbose = true
 			showBanner()
 			cleanup("full")
 			os.Exit(0)
 		case "-u":
+			adminCheck()
 			skipPause = true
+			verbose = true
 			if len(os.Args) > 2 {
 				showBanner()
 				cleanup("user", os.Args[2])
@@ -198,7 +225,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	startup()
+	getAdmin()
+	init_term()
 	showBanner()
 	showCommands()
 
@@ -249,7 +277,8 @@ https://github.com/Knuspii/crunchycleaner
 			time.Sleep(CMDWAIT)
 			cancel()
 			clearScreen()
-			startup()
+			getAdmin()
+			init_term()
 			showBanner()
 			showCommands()
 
