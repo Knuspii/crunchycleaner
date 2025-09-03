@@ -34,11 +34,18 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 - 💻 **Cross-Platform**: Works on both **Windows** and **Linux**
 - ⚡ **Lightweight**: Single binary, no dependencies
 - 🎨 **TUI (Text-UI)**: Simple, minimalist interface, no confusing menus
-- 🧹 **Multiple Modes**:
-  - Safe Clean (harmless cache cleanup)
+- 🧹 **Multiple Modes**:- Safe Clean (harmless cache cleanup)
   - Full Clean (deep cleanup of system junk)
   - User Clean (profile-specific cleanup)
 
 ---
 
 ## 📥 [[Download here]](https://github.com/Knuspii/crunchycleaner/releases) <- Click here to download CrunchyCleaner!
+
+---
+
+## 📥 Download and install as command
+Linux:
+```
+sudo wget -O /usr/local/bin/crunchycleaner https://github.com/Knuspii/crunchycleaner/releases/latest/download/crunchycleaner && chmod +x /usr/local/bin/crunchycleaner
+```
