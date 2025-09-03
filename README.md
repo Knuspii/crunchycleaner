@@ -3,24 +3,32 @@
 [![GitHub Issues](https://img.shields.io/github/issues/Knuspii/crunchycleaner)](https://github.com/Knuspii/crunchycleaner/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/Knuspii/crunchycleaner?style=social)](https://github.com/Knuspii/crunchycleaner/stargazers)
 
-<div align="center"> <pre>
-  ______   _______   __    __  ___   __   ______   __    __  __    __ 
-░░      ░░░       ░░░  ░░░░  ░░   ░░░  ░░░      ░░░  ░░░░  ░░  ░░░░  ░
-▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒▒  ▒▒  ▒▒
-▓  ▓▓▓▓▓▓▓▓       ▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓  ▓▓▓▓▓▓▓▓        ▓▓▓▓    ▓▓▓
-█  ████  ██  ███  ███  ████  ██  ██    ██  ████  ██  ████  █████  ████
-██      ███  ████  ███      ███  ███   ███      ███  ████  █████  ████
-  ______   __        ________   ______   ___   __  ________  _______  
-░░      ░░░  ░░░░░░░░        ░░░      ░░░   ░░░  ░░        ░░       ░░
-▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒
-▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓      ▓▓▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓      ▓▓▓▓       ▓▓
-█  ████  ██  ████████  ████████        ██  ██    ██  ████████  ███  ██
-██      ███        ██        ██  ████  ██  ███   ██        ██  ████  █
-</pre> </div>
+<h1>CrunchyCleaner 🧹</h1>
 
-### ✨ A lightweight, cross-platform system cleanup tool written in **Go**
+<p align="center">
+<pre>
+  ____________________     .-.
+ |  |              |  |    |_|
+ |[]|              |[]|    | |
+ |  |              |  |    |=|
+ |  |              |  |  .=/I\=.
+ |  |              |  | ////V\\\\
+ |  |______________|  | |#######|
+ |                    | |||||||||
+ |     ____________   |
+ |    | __      |  |  |
+ |    ||  |     |  |  |
+ |    ||__|     |  |  | CrunchyCleaner - Cleanup your system!
+ |____|_________|__|__| Made by: Knuspii, (M)
+</pre>
+</p>
+
+### ✨ A lightweight, cross-platform system cleanup tool
 CrunchyCleaner is made to be simple, easy and *very crunchy indeed!*\
-It helps you clear out caches, temp files, logs, and more — without confusing menus.
+It helps you clear out caches, temp files, logs, and more — without confusing menus and 100+ options.
+
+
+## 📥 [[Download here]](https://github.com/Knuspii/crunchycleaner/releases) <- Click here to download CrunchyCleaner!
 
 ---
 
@@ -36,29 +44,19 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 
 ---
 
-## 📥 Download / Installation
-
-### Download: 👉 [[Grab the latest release here]](https://github.com/Knuspii/crunchycleaner/releases)
-
-### 🛠️ Build from Source
-
-1. Install [Go](https://go.dev/dl/) (version 1.24+ recommended):
-```bash
-go version
+## ⚙️ Start-Options
 ```
+Usage:
+  crunchycleaner [option]
 
-2. Clone the repository:
-```bash
-git clone https://github.com/Knuspii/crunchycleaner.git
-cd crunchycleaner
-```
-
-3. Build the project:
-```bash
-go build -o crunchycleaner CrunchyCleaner.go
-```
-
-4. Run it:
-```bash
-./crunchycleaner
-```
+Options:
+  No option     Run with TUI (Text-UI)
+  -t            Run with TUI (Text-UI)
+  -s            Run Safe-Cleanup
+  -sy           Run Safe-Cleanup (non-interactive, for scripts)
+  -f            Run Full-Cleanup
+  -fy           Run Full-Cleanup (non-interactive, for scripts)
+  -u [<user>]}  Run User-Cleanup
+  -uy [<user>]  Run User-Cleanup (non-interactive, for scripts)
+  -v            Show version
+  -h            Show this help page
