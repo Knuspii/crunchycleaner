@@ -60,4 +60,3 @@ Options:
   -uy [<user>]  Run User-Cleanup (non-interactive, for scripts)
   -v            Show version
   -h            Show this help page
-```
