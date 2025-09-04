@@ -6,19 +6,20 @@
 package main
 
 import (
-	"bufio"         // For reading user input
-	"context"       // For controlling goroutines (e.g., stopping the spinner)
-	"fmt"           // Formatted input/output
-	"os"            // General OS interactions (exit, files, etc.)
-	"os/exec"       // Executing external commands
-	"path/filepath" // Handling file paths in a cross-platform way
-	"runtime"       // Info about the OS / architecture
-	"strings"       // String manipulation (Trim, Split, Join, etc.)
-	"time"          // Time-related functions (sleep, timestamp, timeout)
+	"bufio"     // For reading user input
+	"context"   // For controlling goroutines (e.g., stopping the spinner)
+	"fmt"       // Formatted input/output
+	"os"        // General OS interactions (exit, files, etc.)
+	"os/exec"   // Executing external commands
+	"os/signal" // Handling file paths in a cross-platform way
+	"runtime"   // Info about the OS / architecture
+	"strings"   // String manipulation (Trim, Split, Join, etc.)
+	"syscall"   // System calls (for signal handling)
+	"time"      // Time-related functions (sleep, timestamp, timeout)
 )
 
 const (
-	CC_VERSION = "0.5"
+	CC_VERSION = "0.7"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command
@@ -32,12 +33,13 @@ const (
 )
 
 var (
-	consoleRunning  = true // Controls main loop
-	verbose         = false
-	selectedProfile = ""           // Username for user cleanup
-	skipPause       = false        // If true, skip pause
-	goos            = runtime.GOOS // Current OS
-	reader          = bufio.NewReader(os.Stdin)
+	origCols, origLines int            // Original terminal size
+	consoleRunning      = true         // Controls main loop
+	verbose             = false        // If true, print all errors
+	selectedProfile     = ""           // Username for user cleanup
+	skipPause           = false        // If true, skip pause
+	goos                = runtime.GOOS // Current OS
+	reader              = bufio.NewReader(os.Stdin)
 	//SPINNERFRAMES  = []rune{'⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'} // Spinner animation frames
 	SPINNERFRAMES = []rune{'|', '/', '-', '\\'} // Spinner animation frames
 )
@@ -92,9 +94,9 @@ func getAdmin() {
 			printInfo("Requesting root privileges...\n")
 
 			// Get absolute path to the running executable
-			scriptPath, err := filepath.Abs(os.Args[0])
+			scriptPath, err := exec.LookPath(os.Args[0])
 			if err != nil {
-				printError(fmt.Sprintf("Could not get own path: %v", err))
+				printError(fmt.Sprintf("Could not find executable: %v", err))
 				return
 			}
 
@@ -122,22 +124,57 @@ func getAdmin() {
 	}
 }
 
-func init_term() {
+func getTermSize() (cols, lines int, err error) {
 	switch goos {
 	case "windows":
-		// Set PowerShell window size and buffer
+		// Windows: get with PowerShell
+		cmd := exec.Command("powershell", "-Command",
+			`$size = $Host.UI.RawUI.WindowSize; Write-Output "$($size.Width) $($size.Height)"`)
+		out, err := cmd.Output()
+		if err != nil {
+			return 0, 0, err
+		}
+		fmt.Sscanf(string(out), "%d %d", &cols, &lines)
+	default:
+		// Unix: use stty
+		cmd := exec.Command("stty", "size")
+		cmd.Stdin = os.Stdin
+		out, err := cmd.Output()
+		if err != nil {
+			return 0, 0, err
+		}
+		fmt.Sscanf(string(out), "%d %d", &lines, &cols)
+	}
+	return
+}
+
+func setTermSize(cols, lines int) {
+	switch goos {
+	case "windows":
 		psCmd := fmt.Sprintf(
 			`$Host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(%d, %d); $Host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size(%d, 300)`,
-			COLS, LINES, COLS,
+			cols, lines, cols,
 		)
-		_, err := runCommand([]string{"powershell", "-Command", psCmd})
-		if err != nil {
-			printError("Failed to set window size: " + err.Error())
-		}
-
+		_ = exec.Command("powershell", "-Command", psCmd).Run()
 	default:
-		// Set Unix terminal size using ANSI escape codes
-		fmt.Printf("\033[8;%d;%dt", LINES, COLS)
+		fmt.Printf("\033[8;%d;%dt", lines, cols)
+	}
+}
+
+func init_term() {
+	// Save original size
+	cols, lines, err := getTermSize()
+	if err == nil {
+		origCols, origLines = cols, lines
+	}
+
+	// Resize to program defaults
+	setTermSize(COLS, LINES)
+}
+
+func restoreTerm() {
+	if origCols > 0 && origLines > 0 {
+		setTermSize(origCols, origLines)
 	}
 }
 
@@ -175,35 +212,52 @@ func usage() {
 	fmt.Printf("Usage:\n")
 	fmt.Printf("  %scrunchycleaner [option]%s\n\n", CYAN, RC)
 	fmt.Printf("Options:\n")
-	fmt.Printf("  %sNo option%s   Run with TUI (Text-UI)\n", YELLOW, RC)
-	fmt.Printf("  %s-s%s          Run Safe-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-f%s          Run Full-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-u {user}%s   Run User-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-v%s          Show version\n", YELLOW, RC)
-	fmt.Printf("  %s-h%s          Show this help page\n", YELLOW, RC)
+	fmt.Printf("  %sNo option%s     Run with TUI (Text-UI)\n", YELLOW, RC)
+	fmt.Printf("  %s-t%s            Run with TUI (Text-UI)\n", YELLOW, RC)
+	fmt.Printf("  %s-s%s            Run Safe-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-sy%s           Run Safe-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-f%s            Run Full-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-fy%s           Run Full-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-u [<user>]}%s  Run User-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-uy [<user>]%s  Run User-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-v%s            Show version\n", YELLOW, RC)
+	fmt.Printf("  %s-h%s            Show this help page\n", YELLOW, RC)
 }
 
 func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
+		// Safe-Cleanup
 		case "-s":
 			adminCheck()
-			skipPause = true
-			verbose = true
 			showBanner()
 			cleanup("safe")
 			os.Exit(0)
-		case "-f":
-			adminCheck()
+		// Safe-Cleanup (non-interactive)
+		case "-sy":
 			skipPause = true
 			verbose = true
+			adminCheck()
+			showBanner()
+			cleanup("safe")
+			os.Exit(0)
+		// Full-Cleanup
+		case "-f":
+			adminCheck()
 			showBanner()
 			cleanup("full")
 			os.Exit(0)
-		case "-u":
-			adminCheck()
+		// Full-Cleanup (non-interactive)
+		case "-fy":
 			skipPause = true
 			verbose = true
+			adminCheck()
+			showBanner()
+			cleanup("full")
+			os.Exit(0)
+		// User-Cleanup
+		case "-u":
+			adminCheck()
 			if len(os.Args) > 2 {
 				showBanner()
 				cleanup("user", os.Args[2])
@@ -212,19 +266,44 @@ func main() {
 				os.Exit(1)
 			}
 			os.Exit(0)
+		// User-Cleanup (non-interactive)
+		case "-uy":
+			skipPause = true
+			verbose = true
+			adminCheck()
+			if len(os.Args) > 2 {
+				showBanner()
+				cleanup("user", os.Args[2])
+			} else {
+				printError("No profile name provided")
+				os.Exit(1)
+			}
+		// Help
 		case "-h", "--help":
 			showBanner()
 			usage()
 			os.Exit(0)
+		// Version
 		case "-v", "--version":
 			fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
 			os.Exit(0)
+		// TUI
+		case "-t":
+			// Just continue to TUI
 		default:
 			fmt.Printf("Unknown option: %s\n", os.Args[1])
 			usage()
 			os.Exit(1)
 		}
 	}
+	// Catch [Ctrl+C] and restore
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		restoreTerm()
+		os.Exit(0)
+	}()
 	getAdmin()
 	init_term()
 	showBanner()
@@ -258,7 +337,9 @@ func main() {
 
 		// INFO
 		case "i", "info", "infos", "about", "version":
-			fmt.Printf(`CrunchyCleaner Version: %s
+			usage()
+			fmt.Printf(`
+%sCrunchyCleaner Version: %s%s
 
 DISCLAIMER:
 MADE BY: Knuspii, (M)
@@ -267,7 +348,7 @@ A lightweight, cross-platform system cleanup tool.
 You use this tool at your own risk.
 I do not take any responsibilities.
 https://github.com/Knuspii/crunchycleaner
-`, CC_VERSION)
+`, YELLOW, CC_VERSION, RC)
 			consoleRunning = false
 
 		// RESET
@@ -299,6 +380,7 @@ https://github.com/Knuspii/crunchycleaner
 		}
 	}
 	pause()
+	restoreTerm()
 	printTask("EXITED\n")
 	os.Exit(0)
 }

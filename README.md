@@ -35,7 +35,7 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 ## 🔑 Key features:
 
 - 💻 **Cross-Platform**: Works on both **Windows** and **Linux**
-- ⚡ **Lightweight**: Single binary, no dependencies
+- ⚡ **Lightweight**: Single binary, no dependencies (just download and run it)
 - 🎨 **TUI (Text-UI)**: Simple, minimalist interface, no confusing menus
 - 🧹 **Multiple Modes**:
   - Safe Clean (harmless cache cleanup)
@@ -45,18 +45,19 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 ---
 
 ## 📥 Download and install as command:
-- Open your terminal and input this command based on your operating system.\
-- **You need root/admin privileges!**\
+- **You need root/admin privileges!**
+- Open your terminal and input this command, based on your operating system.
 
 **Linux:**
 ```
-sudo curl -L https://github.com/Knuspii/crunchycleaner/releases/latest/download/crunchycleaner -o /usr/local/bin/crunchycleaner && sudo chmod +x /usr/local/bin/crunchycleaner
+sudo curl -L https://github.com/Knuspii/crunchycleaner/releases/latest/download/crunchycleaner -o /usr/local/bin/crunchycleaner && sudo chmod +x /usr/local/bin/crunchycleaner && echo "CrunchyCleaner installed at /usr/local/bin/crunchycleaner. Restart terminal to use 'crunchycleaner'"
 ```
-**Windows (as admin):**
+**Windows (Powershell as admin):**
 ```
-$ip="C:\Program Files\CrunchyCleaner"; if(-not (Test-Path $ip)){New-Item -ItemType Directory -Path $ip -Force | Out-Null}; $ep=Join-Path $ip "crunchycleaner.exe"; Invoke-WebRequest "https://github.com/Knuspii/crunchycleaner/releases/latest/download/crunchycleaner.exe" -OutFile $ep -UseBasicParsing; $envp=[System.Environment]::GetEnvironmentVariable("Path",[System.EnvironmentVariableTarget]::Machine); if($envp -notlike "*$ip*"){[System.Environment]::SetEnvironmentVariable("Path","$envp;$ip",[System.EnvironmentVariableTarget]::Machine); Write-Host "PATH updated! Restart shell to use 'crunchycleaner'"}; Write-Host "CrunchyCleaner installed at $ep"
+$ip="C:\Program Files\CrunchyCleaner"; if(-not (Test-Path $ip)){New-Item -ItemType Directory -Path $ip -Force | Out-Null}; $ep=Join-Path $ip "crunchycleaner.exe"; Invoke-WebRequest "https://github.com/Knuspii/crunchycleaner/releases/latest/download/crunchycleaner.exe" -OutFile $ep -UseBasicParsing; $envp=[System.Environment]::GetEnvironmentVariable("Path",[System.EnvironmentVariableTarget]::Machine); if($envp -notlike "*$ip*"){[System.Environment]::SetEnvironmentVariable("Path","$envp;$ip",[System.EnvironmentVariableTarget]::Machine)}; Write-Host "CrunchyCleaner installed at $ep. Restart terminal to use 'crunchycleaner'"
 ```
-After that just type "crunchycleaner --version" into your terminal and it should output the current version.
+- **Now restart your terminal or reboot.**
+- After that just type "crunchycleaner --version" into your terminal and it should output the current version.
 
 ---
 
@@ -69,10 +70,10 @@ Options:
   No option     Run with TUI (Text-UI)
   -t            Run with TUI (Text-UI)
   -s            Run Safe-Cleanup
-  -sy           Run Safe-Cleanup (non-interactive, for scripts)
+  -sy           Run Safe-Cleanup (non-interactive for scripts)
   -f            Run Full-Cleanup
-  -fy           Run Full-Cleanup (non-interactive, for scripts)
+  -fy           Run Full-Cleanup (non-interactive for scripts)
   -u [<user>]}  Run User-Cleanup
-  -uy [<user>]  Run User-Cleanup (non-interactive, for scripts)
+  -uy [<user>]  Run User-Cleanup (non-interactive for scripts)
   -v            Show version
   -h            Show this help page
