@@ -14,8 +14,8 @@ import (
 	"os/signal" // Handling file paths in a cross-platform way
 	"runtime"   // Info about the OS / architecture
 	"strings"   // String manipulation (Trim, Split, Join, etc.)
-	"syscall"
-	"time" // Time-related functions (sleep, timestamp, timeout)
+	"syscall"   // System calls (for signal handling)
+	"time"      // Time-related functions (sleep, timestamp, timeout)
 )
 
 const (
