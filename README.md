@@ -35,7 +35,7 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
 ## 🔑 Key features:
 
 - 💻 **Cross-Platform**: Works on both **Windows** and **Linux**
-- ⚡ **Lightweight**: Single binary, no dependencies
+- ⚡ **Lightweight**: Single binary, no dependencies (just download and run it)
 - 🎨 **TUI (Text-UI)**: Simple, minimalist interface, no confusing menus
 - 🧹 **Multiple Modes**:
   - Safe Clean (harmless cache cleanup)
