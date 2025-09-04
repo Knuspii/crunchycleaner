@@ -1,5 +1,4 @@
 [![Golang](https://img.shields.io/static/v1?label=Made%20with&message=Go&logo=go&color=007ACC)](https://go.dev/)
-[![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)](https://github.com/knuspii/crunchycleaner/releases)
 [![GitHub Issues](https://img.shields.io/github/issues/knuspii/crunchycleaner)](https://github.com/knuspii/crunchycleaner/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/knuspii/crunchycleaner?style=social)](https://github.com/knuspii/crunchycleaner/stargazers)
 
