@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CC_VERSION = "0.7"
+	CC_VERSION = "0.8"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command
@@ -224,35 +224,110 @@ func usage() {
 	fmt.Printf("  %s-h%s            Show this help page\n", YELLOW, RC)
 }
 
-func main() {
+func normalstartup() {
+	adminCheck()
+	showBanner()
+}
+
+func skipstartup() {
+	verbose = true
+	skipPause = true
+	adminCheck()
+	showBanner()
+}
+
+func handlecommands() {
+	fmt.Print("Enter command" + PROMPT)
+	cmd, _ := reader.ReadString('\n')
+	cmd = strings.TrimSpace(cmd)
+	cmdline()
+	switch cmd {
+	// FULL CLEAN
+	case "fullclean", ",full clean", "full cleanup", "clean full", "cleanup full":
+		cleanup("full")
+		consoleRunning = false
+
+	// SAFE CLEAN
+	case "safeclean", "safe clean", "safe cleanup", "clean safe", "cleanup safe":
+		cleanup("safe")
+		consoleRunning = false
+
+	// USER CLEAN
+	case "userclean", "user clean", "user cleanup", "clean user", "cleanup user":
+		cleanup("user")
+		consoleRunning = false
+
+	// HELP
+	case "help", "h":
+		printInfo("Just type a command from the list above")
+		pause()
+
+	// INFO
+	case "i", "info", "infos", "about", "version":
+		usage()
+		fmt.Printf(`
+%sCrunchyCleaner Version: %s%s
+
+DISCLAIMER:
+MADE BY: Knuspii, (M)
+Help by the World Wide Web.
+A lightweight, cross-platform system cleanup tool.
+You use this tool at your own risk.
+I do not take any responsibilities.
+https://github.com/Knuspii/crunchycleaner
+`, YELLOW, CC_VERSION, RC)
+		consoleRunning = false
+
+	// RESET
+	case "r", "reset", "refresh", "reload", "clear":
+		ctx, cancel := context.WithCancel(context.Background())
+		go asyncSpinner(ctx, "Reloading...")
+		time.Sleep(CMDWAIT)
+		cancel()
+		clearScreen()
+		getAdmin()
+		init_term()
+		showBanner()
+		showCommands()
+
+	// EXIT
+	case "e", "q", "quit", "exit":
+		ctx, cancel := context.WithCancel(context.Background())
+		go asyncSpinner(ctx, "Exiting...")
+		time.Sleep(CMDWAIT)
+		cancel()
+		fmt.Printf("\r\033[2K")
+		consoleRunning = false
+
+	// DEFAULT
+	case "":
+		printInfo("Input a command")
+	default:
+		printInfo("Invalid command: " + cmd)
+	}
+}
+
+func handleargs() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		// Safe-Cleanup
 		case "-s":
-			adminCheck()
-			showBanner()
+			normalstartup()
 			cleanup("safe")
 			os.Exit(0)
 		// Safe-Cleanup (non-interactive)
 		case "-sy":
-			skipPause = true
-			verbose = true
-			adminCheck()
-			showBanner()
+			skipstartup()
 			cleanup("safe")
 			os.Exit(0)
 		// Full-Cleanup
 		case "-f":
-			adminCheck()
-			showBanner()
+			normalstartup()
 			cleanup("full")
 			os.Exit(0)
 		// Full-Cleanup (non-interactive)
 		case "-fy":
-			skipPause = true
-			verbose = true
-			adminCheck()
-			showBanner()
+			skipstartup()
 			cleanup("full")
 			os.Exit(0)
 		// User-Cleanup
@@ -296,6 +371,10 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func main() {
+	handleargs()
 	// Catch [Ctrl+C] and restore
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -310,74 +389,7 @@ func main() {
 	showCommands()
 
 	for consoleRunning {
-		fmt.Print("Enter command" + PROMPT)
-		cmd, _ := reader.ReadString('\n')
-		cmd = strings.TrimSpace(cmd)
-		cmdline()
-		switch cmd {
-		// FULL CLEAN
-		case "fullclean", ",full clean", "full cleanup", "clean full", "cleanup full":
-			cleanup("full")
-			consoleRunning = false
-
-		// SAFE CLEAN
-		case "safeclean", "safe clean", "safe cleanup", "clean safe", "cleanup safe":
-			cleanup("safe")
-			consoleRunning = false
-
-		// USER CLEAN
-		case "userclean", "user clean", "user cleanup", "clean user", "cleanup user":
-			cleanup("user")
-			consoleRunning = false
-
-		// HELP
-		case "help", "h":
-			printInfo("Just type a command from the list above")
-			pause()
-
-		// INFO
-		case "i", "info", "infos", "about", "version":
-			usage()
-			fmt.Printf(`
-%sCrunchyCleaner Version: %s%s
-
-DISCLAIMER:
-MADE BY: Knuspii, (M)
-Help by the World Wide Web.
-A lightweight, cross-platform system cleanup tool.
-You use this tool at your own risk.
-I do not take any responsibilities.
-https://github.com/Knuspii/crunchycleaner
-`, YELLOW, CC_VERSION, RC)
-			consoleRunning = false
-
-		// RESET
-		case "r", "reset", "refresh", "reload", "clear":
-			ctx, cancel := context.WithCancel(context.Background())
-			go asyncSpinner(ctx, "Reloading...")
-			time.Sleep(CMDWAIT)
-			cancel()
-			clearScreen()
-			getAdmin()
-			init_term()
-			showBanner()
-			showCommands()
-
-		// EXIT
-		case "e", "q", "quit", "exit":
-			ctx, cancel := context.WithCancel(context.Background())
-			go asyncSpinner(ctx, "Exiting...")
-			time.Sleep(CMDWAIT)
-			cancel()
-			fmt.Printf("\r\033[2K")
-			consoleRunning = false
-
-		// DEFAULT
-		case "":
-			printInfo("Input a command")
-		default:
-			printInfo("Invalid command: " + cmd)
-		}
+		handlecommands()
 	}
 	pause()
 	restoreTerm()

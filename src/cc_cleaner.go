@@ -90,7 +90,7 @@ func cleanup(mode string, username ...string) {
 			}
 			if !valid {
 				printError("Invalid profile name provided")
-				return
+				os.Exit(1)
 			}
 
 		} else {
@@ -112,7 +112,7 @@ func cleanup(mode string, username ...string) {
 			}
 			if !valid {
 				printError("Invalid profile name provided")
-				return
+				os.Exit(1)
 			}
 			selectedProfile = choice
 		}
