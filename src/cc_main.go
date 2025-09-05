@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CC_VERSION = "0.8"
+	CC_VERSION = "0.9"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command
@@ -236,6 +236,73 @@ func skipstartup() {
 	showBanner()
 }
 
+func handleargs() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		// Safe-Cleanup
+		case "-s":
+			normalstartup()
+			cleanup("safe")
+			os.Exit(0)
+		// Safe-Cleanup (non-interactive)
+		case "-sy":
+			skipstartup()
+			cleanup("safe")
+			os.Exit(0)
+		// Full-Cleanup
+		case "-f":
+			normalstartup()
+			cleanup("full")
+			os.Exit(0)
+		// Full-Cleanup (non-interactive)
+		case "-fy":
+			skipstartup()
+			cleanup("full")
+			os.Exit(0)
+		// User-Cleanup
+		case "-u":
+			adminCheck()
+			if len(os.Args) > 2 {
+				showBanner()
+				cleanup("user", os.Args[2])
+			} else {
+				printError("No profile name provided")
+				os.Exit(1)
+			}
+			os.Exit(0)
+		// User-Cleanup (non-interactive)
+		case "-uy":
+			skipPause = true
+			verbose = true
+			adminCheck()
+			if len(os.Args) > 2 {
+				showBanner()
+				cleanup("user", os.Args[2])
+			} else {
+				printError("No profile name provided")
+				os.Exit(1)
+			}
+			os.Exit(0)
+		// Help
+		case "-h", "--help":
+			showBanner()
+			usage()
+			os.Exit(0)
+		// Version
+		case "-v", "--version":
+			fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
+			os.Exit(0)
+		// TUI
+		case "-t":
+			// Just continue to TUI
+		default:
+			fmt.Printf("Unknown option: %s\n", os.Args[1])
+			usage()
+			os.Exit(1)
+		}
+	}
+}
+
 func handlecommands() {
 	fmt.Print("Enter command" + PROMPT)
 	cmd, _ := reader.ReadString('\n')
@@ -304,72 +371,6 @@ https://github.com/Knuspii/crunchycleaner
 		printInfo("Input a command")
 	default:
 		printInfo("Invalid command: " + cmd)
-	}
-}
-
-func handleargs() {
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		// Safe-Cleanup
-		case "-s":
-			normalstartup()
-			cleanup("safe")
-			os.Exit(0)
-		// Safe-Cleanup (non-interactive)
-		case "-sy":
-			skipstartup()
-			cleanup("safe")
-			os.Exit(0)
-		// Full-Cleanup
-		case "-f":
-			normalstartup()
-			cleanup("full")
-			os.Exit(0)
-		// Full-Cleanup (non-interactive)
-		case "-fy":
-			skipstartup()
-			cleanup("full")
-			os.Exit(0)
-		// User-Cleanup
-		case "-u":
-			adminCheck()
-			if len(os.Args) > 2 {
-				showBanner()
-				cleanup("user", os.Args[2])
-			} else {
-				printError("No profile name provided")
-				os.Exit(1)
-			}
-			os.Exit(0)
-		// User-Cleanup (non-interactive)
-		case "-uy":
-			skipPause = true
-			verbose = true
-			adminCheck()
-			if len(os.Args) > 2 {
-				showBanner()
-				cleanup("user", os.Args[2])
-			} else {
-				printError("No profile name provided")
-				os.Exit(1)
-			}
-		// Help
-		case "-h", "--help":
-			showBanner()
-			usage()
-			os.Exit(0)
-		// Version
-		case "-v", "--version":
-			fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
-			os.Exit(0)
-		// TUI
-		case "-t":
-			// Just continue to TUI
-		default:
-			fmt.Printf("Unknown option: %s\n", os.Args[1])
-			usage()
-			os.Exit(1)
-		}
 	}
 }
 

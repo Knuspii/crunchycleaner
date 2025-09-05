@@ -73,6 +73,9 @@ func cleanup(mode string, username ...string) {
 		// Bail out if we found no profiles
 		if len(profiles) == 0 {
 			printError("No user profiles found!")
+			if !skipPause {
+				pause()
+			}
 			return
 		}
 
@@ -90,6 +93,9 @@ func cleanup(mode string, username ...string) {
 			}
 			if !valid {
 				printError("Invalid profile name provided")
+				if !skipPause {
+					pause()
+				}
 				os.Exit(1)
 			}
 
