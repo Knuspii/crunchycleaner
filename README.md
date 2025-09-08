@@ -74,7 +74,7 @@ Options:
   -sy           Run Safe-Cleanup (non-interactive for scripts)
   -f            Run Full-Cleanup
   -fy           Run Full-Cleanup (non-interactive for scripts)
-  -u [<user>]}  Run User-Cleanup
+  -u [<user>]   Run User-Cleanup
   -uy [<user>]  Run User-Cleanup (non-interactive for scripts)
   -v            Show version
   -h            Show this help page
