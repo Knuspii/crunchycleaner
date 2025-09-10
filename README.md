@@ -68,13 +68,13 @@ Usage:
   crunchycleaner [option]
 
 Options:
-  No option     Run with TUI (Text-UI)
-  -t            Run with TUI (Text-UI)
-  -s            Run Safe-Cleanup
-  -sy           Run Safe-Cleanup (non-interactive for scripts)
-  -f            Run Full-Cleanup
-  -fy           Run Full-Cleanup (non-interactive for scripts)
-  -u [<user>]   Run User-Cleanup
-  -uy [<user>]  Run User-Cleanup (non-interactive for scripts)
-  -v            Show version
-  -h            Show this help page
+  No option   Run with TUI (Text-UI)
+  -t          Run with TUI (Text-UI)
+  -s          Run Safe-Cleanup
+  -sy         Run Safe-Cleanup (non-interactive for scripts)
+  -f          Run Full-Cleanup
+  -fy         Run Full-Cleanup (non-interactive for scripts)
+  -u <user>   Run User-Cleanup
+  -uy <user>  Run User-Cleanup (non-interactive for scripts)
+  -v          Show version
+  -h          Show this help page
