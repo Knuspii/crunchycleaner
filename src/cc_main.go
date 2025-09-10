@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CC_VERSION = "0.9"
+	CC_VERSION = "1.1"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command
@@ -212,16 +212,16 @@ func usage() {
 	fmt.Printf("Usage:\n")
 	fmt.Printf("  %scrunchycleaner [option]%s\n\n", CYAN, RC)
 	fmt.Printf("Options:\n")
-	fmt.Printf("  %sNo option%s     Run with TUI (Text-UI)\n", YELLOW, RC)
-	fmt.Printf("  %s-t%s            Run with TUI (Text-UI)\n", YELLOW, RC)
-	fmt.Printf("  %s-s%s            Run Safe-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-sy%s           Run Safe-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
-	fmt.Printf("  %s-f%s            Run Full-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-fy%s           Run Full-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
-	fmt.Printf("  %s-u [<user>]}%s  Run User-Cleanup\n", YELLOW, RC)
-	fmt.Printf("  %s-uy [<user>]%s  Run User-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
-	fmt.Printf("  %s-v%s            Show version\n", YELLOW, RC)
-	fmt.Printf("  %s-h%s            Show this help page\n", YELLOW, RC)
+	fmt.Printf("  %sNo option%s   Run with TUI (Text-UI)\n", YELLOW, RC)
+	fmt.Printf("  %s-t%s          Run with TUI (Text-UI)\n", YELLOW, RC)
+	fmt.Printf("  %s-s%s          Run Safe-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-sy%s         Run Safe-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-f%s          Run Full-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-fy%s         Run Full-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-u <user> %s  Run User-Cleanup\n", YELLOW, RC)
+	fmt.Printf("  %s-uy <user>%s  Run User-Cleanup (non-interactive for scripts)\n", YELLOW, RC)
+	fmt.Printf("  %s-v%s          Show version\n", YELLOW, RC)
+	fmt.Printf("  %s-h%s          Show this help page\n", YELLOW, RC)
 }
 
 func normalstartup() {
@@ -312,16 +312,19 @@ func handlecommands() {
 	// FULL CLEAN
 	case "fullclean", ",full clean", "full cleanup", "clean full", "cleanup full":
 		cleanup("full")
+		pause()
 		consoleRunning = false
 
 	// SAFE CLEAN
 	case "safeclean", "safe clean", "safe cleanup", "clean safe", "cleanup safe":
 		cleanup("safe")
+		pause()
 		consoleRunning = false
 
 	// USER CLEAN
 	case "userclean", "user clean", "user cleanup", "clean user", "cleanup user":
 		cleanup("user")
+		pause()
 		consoleRunning = false
 
 	// HELP
@@ -341,9 +344,12 @@ Help by the World Wide Web.
 A lightweight, cross-platform system cleanup tool.
 You use this tool at your own risk.
 I do not take any responsibilities.
+This work is licensed under the:
+Creative Commons Attribution-
+NonCommercial 4.0 International License.
 https://github.com/Knuspii/crunchycleaner
 `, YELLOW, CC_VERSION, RC)
-		consoleRunning = false
+		pause()
 
 	// RESET
 	case "r", "reset", "refresh", "reload", "clear":
@@ -369,8 +375,10 @@ https://github.com/Knuspii/crunchycleaner
 	// DEFAULT
 	case "":
 		printInfo("Input a command")
+		pause()
 	default:
 		printInfo("Invalid command: " + cmd)
+		pause()
 	}
 }
 
@@ -392,7 +400,6 @@ func main() {
 	for consoleRunning {
 		handlecommands()
 	}
-	pause()
 	restoreTerm()
 	printTask("EXITED\n")
 	os.Exit(0)
