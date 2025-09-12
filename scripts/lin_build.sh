@@ -14,5 +14,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "Building CrunchyCleaner for Linux ARM64..."
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o ../crunchycleaner-arm64 ../src/.
+if [ $? -ne 0 ]; then
+    echo "Linux ARM64 build failed"
+    exit 1
+fi
+
 echo "Build finished successfully."
 exit 0

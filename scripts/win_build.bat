@@ -22,6 +22,17 @@ if errorlevel 1 (
     pause
 )
 
+echo Building CrunchyCleaner for Linux ARM64...
+set CGO_ENABLED=0
+set GOOS=linux
+set GOARCH=arm64
+go build -o ..\crunchycleaner-arm64 ..\src\.
+if errorlevel 1 (
+    echo Linux ARM64 build failed
+    exit /b 1
+    pause
+)
+
 echo Build finished successfully.
 timeout /t 3
 exit
