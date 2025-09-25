@@ -173,24 +173,28 @@ func buildWindowsTasks(mode string) []task {
 	case "full":
 		return []task{
 			{desc: "%TEMP% (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
-			{desc: "\\...\\Windows\\Explorer (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\Microsoft\\Windows\\Explorer`) }},
-			{desc: "\\...\\FontCache (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\FontCache`) }},
-			{desc: "\\...\\winevt\\Logs (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\System32\\winevt\\Logs`) }},
-			{desc: "\\...\\WindowsUpdate\\Logs (built-in)", goFunc: func() error {
+			{desc: "\\..\\Windows\\Explorer (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\Microsoft\\Windows\\Explorer`) }},
+			{desc: "\\..\\FontCache (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\FontCache`) }},
+			{desc: "\\..\\winevt\\Logs (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\System32\\winevt\\Logs`) }},
+			{desc: "\\..\\WindowsUpdate\\Logs (built-in)", goFunc: func() error {
 				return cleanFolder(os.Getenv("ProgramData") + `\\Microsoft\\Windows\\WindowsUpdate\\Logs`)
 			}},
-			{desc: "\\...\\Logs (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Logs`) }},
-			{desc: "\\...\\Temp (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Temp`) }},
-			{desc: "Admin Trash (shell)", cmd: []string{"powershell", "-Command", "Clear-RecycleBin -Force -Confirm:$false -ErrorAction SilentlyContinue"}},
+			{desc: "\\..\\Logs (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Logs`) }},
+			{desc: "\\..\\Temp (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Temp`) }},
+			{desc: "\\..\\Windows\\WER (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\\Microsoft\\Windows\\WER`) }},
+			{desc: "\\..\\..\\DeliveryOptimization (built-in)", goFunc: func() error {
+				return cleanFolder(os.Getenv("SystemRoot") + `\\SoftwareDistribution\\DeliveryOptimization`)
+			}},
+			//{desc: "Admin Trash (shell)", cmd: []string{"powershell", "-Command", "Clear-RecycleBin -Force -Confirm:$false -ErrorAction SilentlyContinue"}},
 			{desc: "Windows Update Cache (shell)", cmd: []string{"powershell", "Remove-Item -Path $env:SystemRoot\\SoftwareDistribution\\Download\\* -Recurse -Force"}},
-			{desc: "\\...\\Prefetch (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Prefetch`) }},
+			{desc: "\\..\\Prefetch (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Prefetch`) }},
 			{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
 		}
 	default:
 		return []task{
 			{desc: "%TEMP% (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
-			{desc: "\\...\\Windows\\Explorer (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\Microsoft\\Windows\\Explorer`) }},
-			{desc: "\\...\\FontCache (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\FontCache`) }},
+			{desc: "\\..\\Windows\\Explorer (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\Microsoft\\Windows\\Explorer`) }},
+			{desc: "\\..\\FontCache (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\\FontCache`) }},
 			{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
 		}
 	}
@@ -204,8 +208,10 @@ func buildLinuxTasks(mode string) []task {
 			{desc: "/tmp (built-in)", goFunc: func() error { return cleanFolder("/tmp") }},
 			{desc: "/var/tmp (built-in)", goFunc: func() error { return cleanFolder("/var/tmp") }},
 			{desc: "/var/cache (built-in)", goFunc: func() error { return cleanFolder("/var/cache") }},
-			{desc: "Root Trash (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
-			{desc: "All System Logs (10 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
+			//{desc: "Root Trash (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
+			{desc: "All System Logs (>10 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
+			{desc: "/../systemd/coredump (built-in)", goFunc: func() error { return cleanFolder("/var/lib/systemd/coredump") }},
+			{desc: "/var/crash (built-in)", goFunc: func() error { return cleanFolder("/var/crash") }},
 			{desc: "fc-cache (shell)", cmd: []string{"fc-cache", "-fr"}},
 			{desc: "Apt Cache (shell)", cmd: []string{"apt-get", "clean"}},
 			{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
