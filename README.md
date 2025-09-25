@@ -28,10 +28,7 @@
 CrunchyCleaner is made to be simple, easy and *very crunchy indeed!*\
 It helps you clear out caches, temp files, logs, and more — without confusing menus and 100+ options.
 
-
 ## 📥 [[Download here]](https://github.com/Knuspii/crunchycleaner/releases) <- Click here to download CrunchyCleaner!
-
----
 
 ## 🔑 Key features:
 
@@ -42,8 +39,6 @@ It helps you clear out caches, temp files, logs, and more — without confusing 
   - Safe Clean (harmless cache cleanup)
   - Full Clean (deep cleanup of system junk)
   - User Clean (profile-specific cleanup)
-
----
 
 ## 📥 Download and install as command:
 - **You need root/admin privileges!**
@@ -59,8 +54,6 @@ $ip="C:\Program Files\CrunchyCleaner"; if(-not (Test-Path $ip)){New-Item -ItemTy
 ```
 - **Now restart your terminal or reboot.**
 - After that just type "crunchycleaner --version" into your terminal and it should output the current version.
-
----
 
 ## ⚙️ Start options:
 ```
@@ -79,3 +72,6 @@ Options:
   -v          Show version
   -h          Show this help page
 ```
+
+> [!WARNING]
+> You use this tool at your own risk!
