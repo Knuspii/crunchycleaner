@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CC_VERSION = "1.1"
+	CC_VERSION = "1.2"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command
@@ -36,7 +36,6 @@ var (
 	origCols, origLines int            // Original terminal size
 	consoleRunning      = true         // Controls main loop
 	verbose             = false        // If true, print all errors
-	selectedProfile     = ""           // Username for user cleanup
 	skipPause           = false        // If true, skip pause
 	goos                = runtime.GOOS // Current OS
 	reader              = bufio.NewReader(os.Stdin)
@@ -81,7 +80,7 @@ func getAdmin() {
 			if err := elevate.Run(); err != nil {
 				// Failed to elevate privileges
 				printError(fmt.Sprintf("Failed to restart as admin: %v", err))
-				fmt.Println("CrunchyCleaner might not work correctly without admin rights.")
+				fmt.Println("CrunchyCleaner might not work correctly without admin rights")
 				pause()
 			} else {
 				// Successfully elevated, exit current process
@@ -334,7 +333,6 @@ func handlecommands() {
 
 	// INFO
 	case "i", "info", "infos", "about", "version":
-		usage()
 		fmt.Printf(`
 %sCrunchyCleaner Version: %s%s
 
