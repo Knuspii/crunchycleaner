@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CC_VERSION = "1.2"
+	CC_VERSION = "1.3"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command

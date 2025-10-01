@@ -16,6 +16,7 @@ type task struct {
 	desc   string       // Short description of the task
 	cmd    []string     // Command-line slice to execute
 	goFunc func() error // Go function to execute
+	path   string
 }
 
 // cleanFolder deletes **everything inside** a folder but keeps the folder itself alive
@@ -142,17 +143,35 @@ func buildUserTasks(goos, profile string) []task {
 	case "windows":
 		userPath := os.Getenv("SystemDrive") + `\\Users\\` + profile
 		return []task{
-			//{desc: "~\\...\\Recycle Bin (shell)", cmd: []string{"powershell", "-Command", "Clear-RecycleBin -Force -Confirm:$false -ErrorAction SilentlyContinue"}},
-			{desc: "~\\...\\Windows\\Explorer (built-in)", goFunc: func() error { return cleanFolder(userPath + `\\AppData\\Local\\Microsoft\\Windows\\Explorer`) }},
-			{desc: "~\\...\\Local\\CrashDumps (built-in)", goFunc: func() error { return cleanFolder(userPath + `\\AppData\\Local\\CrashDumps`) }},
-			{desc: "~\\...\\Local\\Temp (built-in)", goFunc: func() error { return cleanFolder(userPath + `\\AppData\\Local\\Temp`) }},
+			{
+				desc:   "Windows Explorer Cache",
+				path:   userPath + `\AppData\Local\Microsoft\Windows\Explorer`,
+				goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Microsoft\Windows\Explorer`) },
+			},
+			{
+				desc:   "Local Crash Dumps",
+				path:   userPath + `\AppData\Local\CrashDumps`,
+				goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\CrashDumps`) },
+			},
+			{
+				desc:   "Temp Folder",
+				path:   userPath + `\AppData\Local\Temp`,
+				goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Temp`) },
+			},
 		}
 	default:
 		userPath := "/home/" + profile
 		return []task{
-			//{desc: "~/.../share/Trash (built-in)", goFunc: func() error { return cleanFolder(userPath + "/.local/share/Trash") }},
-			{desc: "~/.cache (built-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache") }},
-			{desc: "~/.thumbnails (built-in)", goFunc: func() error { return cleanFolder(userPath + "/.thumbnails") }},
+			{
+				desc:   "Cache Folder",
+				path:   userPath + "/.cache",
+				goFunc: func() error { return cleanFolder(userPath + "/.cache") },
+			},
+			{
+				desc:   "Thumbnails",
+				path:   userPath + "/.thumbnails",
+				goFunc: func() error { return cleanFolder(userPath + "/.thumbnails") },
+			},
 		}
 	}
 }
@@ -172,27 +191,95 @@ func buildWindowsTasks(mode string) []task {
 	switch mode {
 	case "full":
 		return []task{
-			{desc: "\\..\\winevt\\Logs (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\System32\\winevt\\Logs`) }},
-			{desc: "\\..\\WindowsUpdate\\Logs (built-in)", goFunc: func() error {
-				return cleanFolder(os.Getenv("ProgramData") + `\\Microsoft\\Windows\\WindowsUpdate\\Logs`)
-			}},
-			{desc: "\\..\\Logs (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Logs`) }},
-			{desc: "\\..\\Temp (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Temp`) }},
-			{desc: "\\..\\Prefetch (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\Prefetch`) }},
-			{desc: "\\..\\Windows\\WER (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\\Microsoft\\Windows\\WER`) }},
-			{desc: "\\..\\..\\DeliveryOptimization (built-in)", goFunc: func() error {
-				return cleanFolder(os.Getenv("SystemRoot") + `\\SoftwareDistribution\\DeliveryOptimization`)
-			}},
-			//{desc: "Admin Trash (shell)", cmd: []string{"powershell", "-Command", "Clear-RecycleBin -Force -Confirm:$false -ErrorAction SilentlyContinue"}},
-			{desc: "\\..\\SoftwareDist..\\Download (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\\SoftwareDistribution\\Download`) }},
-			{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
+			{
+				desc:   "Windows Event Logs",
+				path:   os.Getenv("SystemRoot") + `\System32\winevt\Logs`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\winevt\Logs`) },
+			},
+			{
+				desc:   "Windows Update Logs",
+				path:   os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`,
+				goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`) },
+			},
+			{
+				desc:   "Windows Logs",
+				path:   os.Getenv("SystemRoot") + `\Logs`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Logs`) },
+			},
+			{
+				desc:   "Temp Folder",
+				path:   os.Getenv("SystemRoot") + `\Temp`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Temp`) },
+			},
+			{
+				desc:   "Prefetch Folder",
+				path:   os.Getenv("SystemRoot") + `\Prefetch`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Prefetch`) },
+			},
+			{
+				desc:   "Windows WER",
+				path:   os.Getenv("ProgramData") + `\Microsoft\Windows\WER`,
+				goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows\WER`) },
+			},
+			{
+				desc:   "WDI Log Files",
+				path:   os.Getenv("SystemRoot") + `\System32\WDI\LogFiles`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\WDI\LogFiles`) },
+			},
+			{
+				desc: "Defender CacheManager",
+				path: os.Getenv("ProgramData") + `\Microsoft\Windows Defender\Scans\History\CacheManager`,
+				goFunc: func() error {
+					return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows Defender\Scans\History\CacheManager`)
+				},
+			},
+			{
+				desc:   "CBS Logs",
+				path:   os.Getenv("SystemRoot") + `\Logs\CBS`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Logs\CBS`) },
+			},
+			{
+				desc: "Delivery Optimization",
+				path: os.Getenv("SystemRoot") + `\SoftwareDistribution\DeliveryOptimization`,
+				goFunc: func() error {
+					return cleanFolder(os.Getenv("SystemRoot") + `\SoftwareDistribution\DeliveryOptimization`)
+				},
+			},
+			{
+				desc:   "Windows.old",
+				path:   `C:\Windows.old`,
+				goFunc: func() error { return cleanFolder(`C:\Windows.old`) },
+			},
+			{
+				desc:   "SoftwareDistribution Download",
+				path:   os.Getenv("SystemRoot") + `\SoftwareDistribution\Download`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\SoftwareDistribution\Download`) },
+			},
+			{
+				desc:   "Driver FileRepository",
+				path:   os.Getenv("SystemRoot") + `\System32\DriverStore\FileRepository`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\DriverStore\FileRepository`) },
+			},
 		}
 	default:
 		return []task{
-			{desc: "\\..\\WindowsUpdate\\Logs (built-in)", goFunc: func() error {
-				return cleanFolder(os.Getenv("ProgramData") + `\\Microsoft\\Windows\\WindowsUpdate\\Logs`)
-			}},
-			{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
+			{
+				desc:   "Temp Folder",
+				path:   os.Getenv("SystemRoot") + `\Temp`,
+				goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Temp`) },
+			},
+			{
+				desc:   "Windows Update Logs",
+				path:   os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`,
+				goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`) },
+			},
+			{
+				desc: "Defender CacheManager",
+				path: os.Getenv("ProgramData") + `\Microsoft\Windows Defender\Scans\History\CacheManager`,
+				goFunc: func() error {
+					return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows Defender\Scans\History\CacheManager`)
+				},
+			},
 		}
 	}
 }
@@ -202,39 +289,127 @@ func buildLinuxTasks(mode string) []task {
 	switch mode {
 	case "full":
 		return []task{
-			{desc: "/tmp (built-in)", goFunc: func() error { return cleanFolder("/tmp") }},
-			{desc: "/var/tmp (built-in)", goFunc: func() error { return cleanFolder("/var/tmp") }},
-			{desc: "/var/cache (built-in)", goFunc: func() error { return cleanFolder("/var/cache") }},
-			//{desc: "Root Trash (built-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
-			{desc: "All System Logs (>10 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
-			{desc: "/../systemd/coredump (built-in)", goFunc: func() error { return cleanFolder("/var/lib/systemd/coredump") }},
-			{desc: "/var/crash (built-in)", goFunc: func() error { return cleanFolder("/var/crash") }},
-			{desc: "fc-cache (shell)", cmd: []string{"fc-cache", "-fr"}},
-			{desc: "Apt Cache (shell)", cmd: []string{"apt-get", "clean"}},
-			{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
-			{desc: "Pip Cache (shell)", cmd: []string{"pip", "cache", "purge"}},
-			{desc: "Npm Cache (shell)", cmd: []string{"npm", "cache", "clean", "--force"}},
-			{desc: "Yarn Cache (shell)", cmd: []string{"yarn", "cache", "clean"}},
-			{desc: "DNF Cache (shell)", cmd: []string{"sudo", "dnf", "clean", "all"}},
-			{desc: "Pacman Cache (shell)", cmd: []string{"sudo", "pacman", "-Scc", "--noconfirm"}},
-			{desc: "Nix Garbage Collector (shell)", cmd: []string{"nix-collect-garbage", "-d"}},
-			{desc: "Composer Cache (shell)", cmd: []string{"composer", "clear-cache"}},
-			{desc: "Go Module Cache (shell)", cmd: []string{"go", "clean", "-modcache"}},
-			{desc: "Rust Cargo Cache (shell)", cmd: []string{"cargo", "clean"}},
-			{desc: "Docker System Prune (shell)", cmd: []string{"docker", "system", "prune", "-af"}},
-			{desc: "Podman System Prune (shell)", cmd: []string{"podman", "system", "prune", "-af"}},
-			{desc: "DNS Cache (shell)", cmd: []string{"systemd-resolve", "--flush-caches"}},
+			{
+				desc:   "Temp",
+				path:   "/tmp",
+				goFunc: func() error { return cleanFolder("/tmp") },
+			},
+			{
+				desc:   "Var Temp",
+				path:   "/var/tmp",
+				goFunc: func() error { return cleanFolder("/var/tmp") },
+			},
+			{
+				desc:   "Var Cache",
+				path:   "/var/cache",
+				goFunc: func() error { return cleanFolder("/var/cache") },
+			},
+			{
+				desc:   "Systemd Coredump",
+				path:   "/var/lib/systemd/coredump",
+				goFunc: func() error { return cleanFolder("/var/lib/systemd/coredump") },
+			},
+			{
+				desc:   "Var Crash",
+				path:   "/var/crash",
+				goFunc: func() error { return cleanFolder("/var/crash") },
+			},
+			{
+				desc: "All System Logs (>10 days)",
+				cmd:  []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"},
+			},
+			{
+				desc: "fc-cache",
+				cmd:  []string{"fc-cache", "-fr"},
+			},
+			{
+				desc: "Apt Cache",
+				cmd:  []string{"apt-get", "clean"},
+			},
+			{
+				desc: "Flatpak Cache",
+				cmd:  []string{"flatpak", "uninstall", "--unused", "-y"},
+			},
+			{
+				desc: "Pip Cache",
+				cmd:  []string{"pip", "cache", "purge"},
+			},
+			{
+				desc: "Npm Cache",
+				cmd:  []string{"npm", "cache", "clean", "--force"},
+			},
+			{
+				desc: "Yarn Cache",
+				cmd:  []string{"yarn", "cache", "clean"},
+			},
+			{
+				desc: "DNF Cache",
+				cmd:  []string{"dnf", "clean", "all"},
+			},
+			{
+				desc: "Pacman Cache",
+				cmd:  []string{"pacman", "-Scc", "--noconfirm"},
+			},
+			{
+				desc: "Nix Garbage Collector",
+				cmd:  []string{"nix-collect-garbage", "-d"},
+			},
+			{
+				desc: "Composer Cache",
+				cmd:  []string{"composer", "clear-cache"},
+			},
+			{
+				desc: "Go Module Cache",
+				cmd:  []string{"go", "clean", "-modcache"},
+			},
+			{
+				desc: "Rust Cargo Cache",
+				cmd:  []string{"cargo", "clean"},
+			},
+			{
+				desc: "Docker System Prune",
+				cmd:  []string{"docker", "system", "prune", "-af"},
+			},
+			{
+				desc: "Podman System Prune",
+				cmd:  []string{"podman", "system", "prune", "-af"},
+			},
+			{
+				desc: "Systemd-Tmpfiles",
+				cmd:  []string{"systemd-tmpfiles", "--clean"},
+			},
 		}
 	default:
 		return []task{
-			{desc: "/tmp (built-in)", goFunc: func() error { return cleanFolder("/tmp") }},
-			{desc: "Journal Logs (>100 days) (shell)", cmd: []string{"journalctl", "--vacuum-time=100d"}},
-			{desc: "fc-cache (shell)", cmd: []string{"fc-cache", "-fr"}},
-			{desc: "Apt Cache (shell)", cmd: []string{"apt-get", "clean"}},
-			{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
-			{desc: "Pacman Cache (shell)", cmd: []string{"pacman", "-Scc", "--noconfirm"}},
-			{desc: "DNF Cache (shell)", cmd: []string{"sudo", "dnf", "clean", "all"}},
-			{desc: "DNS Cache (shell)", cmd: []string{"systemd-resolve", "--flush-caches"}},
+			{
+				desc:   "Temp",
+				path:   "/tmp",
+				goFunc: func() error { return cleanFolder("/tmp") },
+			},
+			{
+				desc: "Journal Logs (>100 days)",
+				cmd:  []string{"journalctl", "--vacuum-time=100d"},
+			},
+			{
+				desc: "fc-cache",
+				cmd:  []string{"fc-cache", "-fr"},
+			},
+			{
+				desc: "Apt Cache",
+				cmd:  []string{"apt-get", "clean"},
+			},
+			{
+				desc: "Flatpak Cache",
+				cmd:  []string{"flatpak", "uninstall", "--unused", "-y"},
+			},
+			{
+				desc: "Pacman Cache",
+				cmd:  []string{"pacman", "-Scc", "--noconfirm"},
+			},
+			{
+				desc: "DNF Cache",
+				cmd:  []string{"dnf", "clean", "all"},
+			},
 		}
 	}
 }
@@ -256,14 +431,23 @@ func askVerbose() {
 // previewTasks prints all tasks before execution
 func previewTasks(tasks []task) {
 	printInfo("The following cleanup tasks will be executed:")
+
 	for _, t := range tasks {
-		cmdStr := strings.Join(t.cmd, " ")
-		if t.goFunc != nil && cmdStr == "" {
-			cmdStr = "(built-in)"
+		var detail string
+		if t.goFunc != nil {
+			if t.path != "" {
+				detail = t.path // zeigt den Pfad automatisch an
+			} else {
+				detail = "(built-in)"
+			}
+		} else if len(t.cmd) > 0 {
+			detail = strings.Join(t.cmd, " ")
 		}
-		fmt.Printf("%s- Cleaning: %s%s\n  → %s\n", CYAN, t.desc, RC, cmdStr)
+
+		fmt.Printf("%s- Cleaning: %s → %s%s\n", CYAN, t.desc, detail, RC)
 	}
-	fmt.Printf("\n")
+
+	fmt.Println()
 	printInfo("The above cleanup tasks will be executed")
 	if verbose {
 		printInfo("Verbose mode: showing all task details and errors")
