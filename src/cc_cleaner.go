@@ -16,31 +16,38 @@ type task struct {
 	desc   string       // Short description of the task
 	cmd    []string     // Command-line slice to execute
 	goFunc func() error // Go function to execute
-	path   string
+	path   string       // Folder to clean
 }
 
-// cleanFolder deletes **everything inside** a folder but keeps the folder itself alive
 func cleanFolder(desc, folder string) task {
 	return task{
 		desc: desc,
 		path: folder,
 		goFunc: func() error {
+			// read all entries (files and subdirectories) inside the folder
 			entries, err := os.ReadDir(folder)
 			if err != nil {
-				return fmt.Errorf("cleanup failed for '%s': %v", folder, err)
+				// return error if reading the folder fails
+				return fmt.Errorf("cleanup failed: %v", err)
 			}
 
+			// iterate over each entry and remove it
 			for _, entry := range entries {
+				// construct full path of the entry
 				path := folder + string(os.PathSeparator) + entry.Name()
+
+				// remove the entry and its contents if it is a directory
 				os.RemoveAll(path)
 			}
+
+			// success: folder contents deleted, folder itself remains
 			return nil
 		},
 	}
 }
 
 // cleanup orchestrates all cleanup tasks based on the mode (user/full/etc)
-// and optionally a username.
+// and optionally a username
 func cleanup(mode string, username ...string) {
 	var tasks []task
 
@@ -198,6 +205,7 @@ func buildWindowsTasks(mode string) []task {
 		cleanFolder("Temp Folder", systemRoot+`\Temp`),
 		cleanFolder("Windows Update Logs", programData+`\Microsoft\Windows\WindowsUpdate\Logs`),
 		cleanFolder("Defender CacheManager", programData+`\Microsoft\Windows Defender\Scans\History\CacheManager`),
+		cleanFolder("Delivery Optimization", systemRoot+`\SoftwareDistribution\DeliveryOptimization`),
 	}
 }
 
@@ -212,6 +220,7 @@ func buildLinuxTasks(mode string) []task {
 			cleanFolder("Var Crash", "/var/crash"),
 			{desc: "All System Logs (>10 days)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
 			{desc: "fc-cache", cmd: []string{"fc-cache", "-fr"}},
+			{desc: "Systemd-Tmpfiles", cmd: []string{"systemd-tmpfiles", "--clean"}},
 			{desc: "Apt Cache", cmd: []string{"apt-get", "clean"}},
 			{desc: "Flatpak Cache", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
 			{desc: "Pip Cache", cmd: []string{"pip", "cache", "purge"}},
@@ -225,7 +234,6 @@ func buildLinuxTasks(mode string) []task {
 			{desc: "Rust Cargo Cache", cmd: []string{"cargo", "clean"}},
 			{desc: "Docker System Prune", cmd: []string{"docker", "system", "prune", "-af"}},
 			{desc: "Podman System Prune", cmd: []string{"podman", "system", "prune", "-af"}},
-			{desc: "Systemd-Tmpfiles", cmd: []string{"systemd-tmpfiles", "--clean"}},
 		}
 	}
 	return []task{
@@ -261,16 +269,13 @@ func previewTasks(tasks []task) {
 	for _, t := range tasks {
 		var detail string
 		if t.goFunc != nil {
-			if t.path != "" {
-				detail = t.path // zeigt den Pfad automatisch an
-			} else {
-				detail = "(built-in)"
-			}
+			detail = t.path // automatically shows the folder path
 		} else if len(t.cmd) > 0 {
-			detail = strings.Join(t.cmd, " ")
+			detail = strings.Join(t.cmd, " ") // join command slice into a single string
 		}
 
-		fmt.Printf("%s- Cleaning: %s → %s%s\n", CYAN, t.desc, detail, RC)
+		// print task description and details
+		fmt.Printf("%s- Cleaning: %s%s\n  -> %s\n", CYAN, t.desc, RC, detail)
 	}
 
 	printInfo("The above cleanup tasks will be executed")
@@ -293,12 +298,15 @@ func runTasks(tasks []task) {
 	time.Sleep(2 * time.Second)
 
 	startFree := getFreeMB()
+	// iterate over all tasks
 	for _, t := range tasks {
+		// create a context to control the async spinner
 		ctx, cancel := context.WithCancel(context.Background())
 		go asyncSpinner(ctx, "Cleaning: "+t.desc)
 		time.Sleep(CMDWAIT)
 
 		var err error
+		// execute task: either Go-native function or shell command
 		if t.goFunc != nil {
 			err = t.goFunc()
 		} else if len(t.cmd) > 0 {
@@ -314,6 +322,7 @@ func runTasks(tasks []task) {
 		}
 	}
 
+	// calculate freed disk space
 	endFree := getFreeMB()
 	diff := endFree - startFree
 	if diff < 0 {
