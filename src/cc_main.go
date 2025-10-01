@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CC_VERSION = "1.1"
+	CC_VERSION = "1.3"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second        // Wait time running a command
@@ -36,7 +36,6 @@ var (
 	origCols, origLines int            // Original terminal size
 	consoleRunning      = true         // Controls main loop
 	verbose             = false        // If true, print all errors
-	selectedProfile     = ""           // Username for user cleanup
 	skipPause           = false        // If true, skip pause
 	goos                = runtime.GOOS // Current OS
 	reader              = bufio.NewReader(os.Stdin)
@@ -81,7 +80,7 @@ func getAdmin() {
 			if err := elevate.Run(); err != nil {
 				// Failed to elevate privileges
 				printError(fmt.Sprintf("Failed to restart as admin: %v", err))
-				fmt.Println("CrunchyCleaner might not work correctly without admin rights.")
+				fmt.Println("CrunchyCleaner might not work correctly without admin rights")
 				pause()
 			} else {
 				// Successfully elevated, exit current process
@@ -151,27 +150,31 @@ func getTermSize() (cols, lines int, err error) {
 func setTermSize(cols, lines int) {
 	switch goos {
 	case "windows":
+		// Build PowerShell command to resize terminal window and buffer
 		psCmd := fmt.Sprintf(
 			`$Host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(%d, %d); $Host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size(%d, 300)`,
 			cols, lines, cols,
 		)
-		_ = exec.Command("powershell", "-Command", psCmd).Run()
+		_ = exec.Command("powershell", "-Command", psCmd).Run() // execute the command silently
 	default:
+		// Send ANSI escape code to resize terminal on Linux/macOS
 		fmt.Printf("\033[8;%d;%dt", lines, cols)
 	}
 }
 
+// It saves the original terminal size and sets it to program defaults.
 func init_term() {
-	// Save original size
+	// Save original terminal size
 	cols, lines, err := getTermSize()
 	if err == nil {
 		origCols, origLines = cols, lines
 	}
 
-	// Resize to program defaults
+	// Resize terminal to program defaults
 	setTermSize(COLS, LINES)
 }
 
+// Restores the terminal to its original size if it was saved.
 func restoreTerm() {
 	if origCols > 0 && origLines > 0 {
 		setTermSize(origCols, origLines)
@@ -334,7 +337,6 @@ func handlecommands() {
 
 	// INFO
 	case "i", "info", "infos", "about", "version":
-		usage()
 		fmt.Printf(`
 %sCrunchyCleaner Version: %s%s
 

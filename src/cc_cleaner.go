@@ -10,219 +10,247 @@ import (
 	"time"
 )
 
-// cleanFolder deletes **everything inside** a folder but keeps the folder itself alive
-func cleanFolder(folder string) error {
-	entries, err := os.ReadDir(folder)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		path := folder + string(os.PathSeparator) + entry.Name()
-		err := os.RemoveAll(path)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+// task defines a cleanup action
+// Either a Go-native function (goFunc) or an external command (cmd)
+type task struct {
+	desc   string       // Short description of the task
+	cmd    []string     // Command-line slice to execute
+	goFunc func() error // Go function to execute
+	path   string       // Folder to clean
 }
 
-// cleanup orchestrates all cleanup tasks based on the mode (user/full/etc) and optionally a username.
+func cleanFolder(desc, folder string) task {
+	return task{
+		desc: desc,
+		path: folder,
+		goFunc: func() error {
+			// read all entries (files and subdirectories) inside the folder
+			entries, err := os.ReadDir(folder)
+			if err != nil {
+				// return error if reading the folder fails
+				return fmt.Errorf("cleanup failed: %v", err)
+			}
+
+			// iterate over each entry and remove it
+			for _, entry := range entries {
+				// construct full path of the entry
+				path := folder + string(os.PathSeparator) + entry.Name()
+
+				// remove the entry and its contents if it is a directory
+				os.RemoveAll(path)
+			}
+
+			// success: folder contents deleted, folder itself remains
+			return nil
+		},
+	}
+}
+
+// cleanup orchestrates all cleanup tasks based on the mode (user/full/etc)
+// and optionally a username
 func cleanup(mode string, username ...string) {
-	// Define a cleanup task with a description and the command to execute
-	type task struct {
-		desc   string       // Short description of the task
-		cmd    []string     // Command-line slice to execute if it's a cmd task
-		goFunc func() error // Go function to execute if it's a Go-native task
+	var tasks []task
+
+	switch mode {
+	case "user":
+		profile, ok := selectProfile(username)
+		if !ok {
+			return
+		}
+		tasks = buildUserTasks(goos, profile)
+	default:
+		tasks = buildSystemTasks(goos, mode)
 	}
 
-	var tasks []task
-	switch mode {
-	// ==================== USER PROFILE CLEANUP ==================== //
-	case "user":
-		var profiles []string
-		switch goos {
-		case "windows":
-			userBase := os.Getenv("SystemDrive") + `\Users`
-			files, err := os.ReadDir(userBase)
-			if err != nil {
-				printError("Reading Users folder: ")
-				fmt.Printf("%s\n", err)
-				return
-			}
-			for _, f := range files {
-				if f.IsDir() {
-					profiles = append(profiles, f.Name())
-				}
-			}
+	askVerbose()
+	previewTasks(tasks)
+	runTasks(tasks)
+}
 
-		default: // Linux / Unix-like
-			files, err := os.ReadDir("/home")
-			if err != nil {
-				printError("Reading /home folder: ")
-				fmt.Printf("%s\n", err)
-				return
-			}
-			for _, f := range files {
-				if f.IsDir() {
-					profiles = append(profiles, f.Name())
-				}
-			}
+// ==================== PROFILE HANDLING ==================== //
+
+// selectProfile returns the chosen user profile (via CLI arg or interactive input)
+func selectProfile(username []string) (string, bool) {
+	profiles := getProfiles()
+	if len(profiles) == 0 {
+		printError("No user profiles found!")
+		if !skipPause {
+			pause()
 		}
+		return "", false
+	}
 
-		// Bail out if we found no profiles
-		if len(profiles) == 0 {
-			printError("No user profiles found!")
+	var selectedProfile string
+	if len(username) > 0 {
+		selectedProfile = username[0]
+		if !contains(profiles, selectedProfile) {
+			printError("Invalid profile name provided")
 			if !skipPause {
 				pause()
 			}
-			return
+			os.Exit(1)
 		}
-
-		// Handle CLI argument for username or interactive selection
-		if len(username) > 0 {
-			selectedProfile = username[0]
-
-			// Check if user exists
-			valid := false
-			for _, p := range profiles {
-				if p == selectedProfile {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				printError("Invalid profile name provided")
-				if !skipPause {
-					pause()
-				}
-				os.Exit(1)
-			}
-
-		} else {
-			// Interactive mode
-			fmt.Println("Available profiles:")
-			for _, p := range profiles {
-				fmt.Printf("  %s\n", p)
-			}
-			fmt.Printf("Select profile name to clean%s", PROMPT)
-			choice, _ := reader.ReadString('\n')
-			choice = strings.TrimSpace(choice)
-
-			valid := false
-			for _, p := range profiles {
-				if p == choice {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				printError("Invalid profile name provided")
-				os.Exit(1)
-			}
-			selectedProfile = choice
+	} else {
+		fmt.Println("Available profiles:")
+		for _, p := range profiles {
+			fmt.Printf("  %s\n", p)
 		}
-
-		fmt.Printf("%sSelected profile: %s%s\n", YELLOW, selectedProfile, RC)
-
-		switch goos {
-		case "windows":
-			userPath := os.Getenv("SystemDrive") + `\Users\` + selectedProfile
-			tasks = []task{
-				// ==================== WINDOWS USER-CLEANUP ====================
-				{desc: "~\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Microsoft\Windows\Explorer`) }},
-				{desc: "~\\...\\Local\\Temp (build-in)", goFunc: func() error { return cleanFolder(userPath + `\AppData\Local\Temp`) }},
-			}
-		default:
-			userPath := "/home/" + selectedProfile
-			tasks = []task{
-				// ==================== LINUX USER-CLEANUP ====================
-				{desc: "~/.../share/Trash (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.local/share/Trash") }},
-				{desc: "~/.cache (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.cache") }},
-				{desc: "~/.thumbnails (build-in)", goFunc: func() error { return cleanFolder(userPath + "/.thumbnails") }},
-			}
+		fmt.Printf("Enter profile name to clean%s", PROMPT)
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+		if !contains(profiles, choice) {
+			printError("Invalid profile name provided")
+			pause()
+			os.Exit(1)
 		}
-	// ==================== SYSTEM CLEANUP ==================== //
-	default:
-		switch goos {
-		// ==================== WINDOWS CLEANUP ==================== //
-		case "windows": // Windows
-			switch mode {
-			default:
-				tasks = []task{
-					// ==================== WINDOWS SAFE-CLEANUP ====================
-					// ==================== BASICS ====================
-					{desc: "%TEMP% (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
-					{desc: "\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
-					{desc: "\\...\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
-					// ==================== EXTRAS ====================
-					{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
-				}
-			case "full":
-				tasks = []task{
-					// ==================== WINDOWS FULL-CLEANUP ====================
-					// ==================== BASICS ====================
-					{desc: "%TEMP% (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("TEMP")) }},
-					{desc: "\\...\\Windows\\Explorer (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\Microsoft\Windows\Explorer`) }},
-					{desc: "\\...\\FontCache (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("LocalAppData") + `\FontCache`) }},
-					{desc: "\\...\\winevt\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\System32\winevt\Logs`) }},
-					{desc: "\\...\\WindowsUpdate\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("ProgramData") + `\Microsoft\Windows\WindowsUpdate\Logs`) }},
-					{desc: "\\...\\Logs (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Logs`) }},
-					{desc: "\\...\\Temp (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Temp`) }},
-					{desc: "Admin Trash (shell) (ignore errors)", cmd: []string{"powershell", "-Command", "Clear-RecycleBin -Force -Confirm:$false -ErrorAction SilentlyContinue"}},
-					{desc: "Windows Update Cache (shell)", cmd: []string{"powershell", "Remove-Item -Path $env:SystemRoot\\SoftwareDistribution\\Download\\* -Recurse -Force"}},
-					// ==================== EXTRAS ====================
-					{desc: "\\...\\Prefetch (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("SystemRoot") + `\Prefetch`) }},
-					{desc: "DNS Cache (shell)", cmd: []string{"ipconfig", "/flushdns"}},
-				}
-			}
-
-		// ==================== LINUX CLEANUP ==================== //
-		default: // Linux
-			switch mode {
-			default:
-				tasks = []task{
-					//   ==================== LINUX SAFE-CLEANUP ====================
-					//   ==================== BASICS ====================
-					{desc: "/tmp (build-in)", goFunc: func() error { return cleanFolder("/tmp") }},
-					{desc: "Journal Logs (100 days) (shell)", cmd: []string{"journalctl", "--vacuum-time=100d"}},
-					// ==================== EXTRAS ====================
-					{desc: "fc-cache (shell)", cmd: []string{"fc-cache", "-fr"}},
-					{desc: "Apt Cache (shell)", cmd: []string{"apt-get", "clean"}},
-					{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
-					{desc: "Pacman Cache (shell)", cmd: []string{"pacman", "-Scc", "--noconfirm"}},
-					{desc: "DNF Cache (shell)", cmd: []string{"sudo", "dnf", "clean", "all"}},
-					{desc: "DNS Cache (shell)", cmd: []string{"systemd-resolve", "--flush-caches"}},
-				}
-			case "full":
-				tasks = []task{
-					//   ==================== LINUX FULL-CLEANUP ====================
-					//   ==================== BASICS ====================
-					{desc: "/tmp (build-in)", goFunc: func() error { return cleanFolder("/tmp") }},
-					{desc: "/var/tmp (build-in)", goFunc: func() error { return cleanFolder("/var/tmp") }},
-					{desc: "/var/cache (build-in)", goFunc: func() error { return cleanFolder("/var/cache") }},
-					{desc: "Root Trash (build-in)", goFunc: func() error { return cleanFolder(os.Getenv("HOME") + "/.local/share/Trash") }},
-					{desc: "All System Logs (10 days) (shell)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
-					// ==================== EXTRAS ====================
-					{desc: "fc-cache (shell)", cmd: []string{"fc-cache", "-fr"}},
-					{desc: "Apt Cache (shell)", cmd: []string{"apt-get", "clean"}},
-					{desc: "Flatpak Cache (shell)", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
-					{desc: "Pip Cache (shell)", cmd: []string{"pip", "cache", "purge"}},
-					{desc: "Npm Cache (shell)", cmd: []string{"npm", "cache", "clean", "--force"}},
-					{desc: "Yarn Cache (shell)", cmd: []string{"yarn", "cache", "clean"}},
-					{desc: "DNF Cache (shell)", cmd: []string{"sudo", "dnf", "clean", "all"}},
-					{desc: "Pacman Cache (shell)", cmd: []string{"sudo", "pacman", "-Scc", "--noconfirm"}},
-					{desc: "Nix Garbage Collector (shell)", cmd: []string{"nix-collect-garbage", "-d"}},
-					{desc: "Composer Cache (shell)", cmd: []string{"composer", "clear-cache"}},
-					{desc: "Go Module Cache (shell)", cmd: []string{"go", "clean", "-modcache"}},
-					{desc: "Rust Cargo Cache (shell)", cmd: []string{"cargo", "clean"}},
-					{desc: "DNS Cache (shell)", cmd: []string{"systemd-resolve", "--flush-caches"}},
-				}
-			}
-		}
+		selectedProfile = choice
 	}
 
-	// Ask user if verbose logging should be enabled
+	fmt.Printf("%sSelected profile: %s%s\n", YELLOW, selectedProfile, RC)
+	return selectedProfile, true
+}
+
+// getProfiles fetches user profiles depending on OS
+func getProfiles() []string {
+	var profiles []string
+	var files []os.DirEntry
+	var err error
+
+	switch goos {
+	case "windows":
+		userBase := os.Getenv("SystemDrive") + `\\Users`
+		files, err = os.ReadDir(userBase)
+	default:
+		files, err = os.ReadDir("/home")
+	}
+
+	if err != nil {
+		printError("Reading profiles folder: ")
+		fmt.Printf("%s\n", err)
+		return nil
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			profiles = append(profiles, f.Name())
+		}
+	}
+	return profiles
+}
+
+// contains helper: check if slice contains string
+func contains(list []string, val string) bool {
+	for _, item := range list {
+		if item == val {
+			return true
+		}
+	}
+	return false
+}
+
+// ==================== TASK BUILDERS ==================== //
+
+// buildUserTasks builds cleanup tasks for a given user profile
+func buildUserTasks(goos, profile string) []task {
+	switch goos {
+	case "windows":
+		userPath := os.Getenv("SystemDrive") + `\\Users\\` + profile
+		return []task{
+			cleanFolder("Windows Explorer Cache", userPath+`\AppData\Local\Microsoft\Windows\Explorer`),
+			cleanFolder("Local Crash Dumps", userPath+`\AppData\Local\CrashDumps`),
+			cleanFolder("Temp Folder", userPath+`\AppData\Local\Temp`),
+		}
+	default:
+		userPath := "/home/" + profile
+		return []task{
+			cleanFolder("Cache Folder", userPath+"/.cache"),
+			cleanFolder("Thumbnails", userPath+"/.thumbnails"),
+		}
+	}
+}
+
+// buildSystemTasks builds cleanup tasks depending on OS and mode
+func buildSystemTasks(goos, mode string) []task {
+	switch goos {
+	case "windows":
+		return buildWindowsTasks(mode)
+	default:
+		return buildLinuxTasks(mode)
+	}
+}
+
+// ==================== WINDOWS TASKS ==================== //
+func buildWindowsTasks(mode string) []task {
+	systemRoot := os.Getenv("SystemRoot")
+	programData := os.Getenv("ProgramData")
+
+	if mode == "full" {
+		return []task{
+			cleanFolder("Windows Event Logs", systemRoot+`\System32\winevt\Logs`),
+			cleanFolder("Windows Update Logs", programData+`\Microsoft\Windows\WindowsUpdate\Logs`),
+			cleanFolder("Windows Logs", systemRoot+`\Logs`),
+			cleanFolder("Temp Folder", systemRoot+`\Temp`),
+			cleanFolder("Prefetch Folder", systemRoot+`\Prefetch`),
+			cleanFolder("Windows WER", programData+`\Microsoft\Windows\WER`),
+			cleanFolder("WDI Log Files", systemRoot+`\System32\WDI\LogFiles`),
+			cleanFolder("Defender CacheManager", programData+`\Microsoft\Windows Defender\Scans\History\CacheManager`),
+			cleanFolder("CBS Logs", systemRoot+`\Logs\CBS`),
+			cleanFolder("Delivery Optimization", systemRoot+`\SoftwareDistribution\DeliveryOptimization`),
+			cleanFolder("Windows.old", `C:\Windows.old`),
+			cleanFolder("SoftwareDistribution Download", systemRoot+`\SoftwareDistribution\Download`),
+			cleanFolder("Driver FileRepository", systemRoot+`\System32\DriverStore\FileRepository`),
+		}
+	}
+	return []task{
+		cleanFolder("Temp Folder", systemRoot+`\Temp`),
+		cleanFolder("Windows Update Logs", programData+`\Microsoft\Windows\WindowsUpdate\Logs`),
+		cleanFolder("Defender CacheManager", programData+`\Microsoft\Windows Defender\Scans\History\CacheManager`),
+		cleanFolder("Delivery Optimization", systemRoot+`\SoftwareDistribution\DeliveryOptimization`),
+	}
+}
+
+// ==================== LINUX TASKS ==================== //
+func buildLinuxTasks(mode string) []task {
+	if mode == "full" {
+		return []task{
+			cleanFolder("Temp", "/tmp"),
+			cleanFolder("Var Temp", "/var/tmp"),
+			cleanFolder("Var Cache", "/var/cache"),
+			cleanFolder("Systemd Coredump", "/var/lib/systemd/coredump"),
+			cleanFolder("Var Crash", "/var/crash"),
+			{desc: "All System Logs (>10 days)", cmd: []string{"sh", "-c", "find /var/log -type f -mtime +10 -exec rm -f {} +"}},
+			{desc: "fc-cache", cmd: []string{"fc-cache", "-fr"}},
+			{desc: "Systemd-Tmpfiles", cmd: []string{"systemd-tmpfiles", "--clean"}},
+			{desc: "Apt Cache", cmd: []string{"apt-get", "clean"}},
+			{desc: "Flatpak Cache", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
+			{desc: "Pip Cache", cmd: []string{"pip", "cache", "purge"}},
+			{desc: "Npm Cache", cmd: []string{"npm", "cache", "clean", "--force"}},
+			{desc: "Yarn Cache", cmd: []string{"yarn", "cache", "clean"}},
+			{desc: "DNF Cache", cmd: []string{"dnf", "clean", "all"}},
+			{desc: "Pacman Cache", cmd: []string{"pacman", "-Scc", "--noconfirm"}},
+			{desc: "Nix Garbage Collector", cmd: []string{"nix-collect-garbage", "-d"}},
+			{desc: "Composer Cache", cmd: []string{"composer", "clear-cache"}},
+			{desc: "Go Module Cache", cmd: []string{"go", "clean", "-modcache"}},
+			{desc: "Rust Cargo Cache", cmd: []string{"cargo", "clean"}},
+			{desc: "Docker System Prune", cmd: []string{"docker", "system", "prune", "-af"}},
+			{desc: "Podman System Prune", cmd: []string{"podman", "system", "prune", "-af"}},
+		}
+	}
+	return []task{
+		cleanFolder("Temp", "/tmp"),
+		{desc: "Journal Logs (>100 days)", cmd: []string{"journalctl", "--vacuum-time=100d"}},
+		{desc: "fc-cache", cmd: []string{"fc-cache", "-fr"}},
+		{desc: "Apt Cache", cmd: []string{"apt-get", "clean"}},
+		{desc: "Flatpak Cache", cmd: []string{"flatpak", "uninstall", "--unused", "-y"}},
+		{desc: "Pacman Cache", cmd: []string{"pacman", "-Scc", "--noconfirm"}},
+		{desc: "DNF Cache", cmd: []string{"dnf", "clean", "all"}},
+	}
+}
+
+// ==================== EXECUTION ==================== //
+
+// askVerbose asks the user if verbose logging should be enabled
+func askVerbose() {
 	if !skipPause {
 		fmt.Print("Enable verbose logging? (yes/NO): ")
 		choice, _ := reader.ReadString('\n')
@@ -231,17 +259,25 @@ func cleanup(mode string, username ...string) {
 			verbose = true
 		}
 	}
+}
 
-	// Preview what will be executed
+// previewTasks prints all tasks before execution
+func previewTasks(tasks []task) {
+	fmt.Println()
 	printInfo("The following cleanup tasks will be executed:")
+
 	for _, t := range tasks {
-		cmdStr := strings.Join(t.cmd, " ")
-		if t.goFunc != nil && cmdStr == "" {
-			cmdStr = "(build-in)"
+		var detail string
+		if t.goFunc != nil {
+			detail = t.path // automatically shows the folder path
+		} else if len(t.cmd) > 0 {
+			detail = strings.Join(t.cmd, " ") // join command slice into a single string
 		}
-		fmt.Printf("%s- Cleaning: %s%s\n  → %s\n", CYAN, t.desc, RC, cmdStr)
+
+		// print task description and details
+		fmt.Printf("%s- Cleaning: %s%s\n  -> %s\n", CYAN, t.desc, RC, detail)
 	}
-	fmt.Printf("\n")
+
 	printInfo("The above cleanup tasks will be executed")
 	if verbose {
 		printInfo("Verbose mode: showing all task details and errors")
@@ -253,33 +289,40 @@ func cleanup(mode string, username ...string) {
 	if !skipPause {
 		pause()
 	}
+}
 
+// runTasks executes all cleanup tasks with spinner and logging
+func runTasks(tasks []task) {
 	fmt.Printf("%s#############################################%s\n", RED, RC)
 	printInfo("*** CrunchyCleaner Cleanup STARTED ***\n")
 	time.Sleep(2 * time.Second)
 
-	// Execute all tasks
 	startFree := getFreeMB()
+	// iterate over all tasks
 	for _, t := range tasks {
+		// create a context to control the async spinner
 		ctx, cancel := context.WithCancel(context.Background())
 		go asyncSpinner(ctx, "Cleaning: "+t.desc)
-		time.Sleep(CMDWAIT) // A little pause to actually see what the hell is going on
+		time.Sleep(CMDWAIT)
 
 		var err error
+		// execute task: either Go-native function or shell command
 		if t.goFunc != nil {
-			_ = t.goFunc() // Execute Go cleanup
+			err = t.goFunc()
 		} else if len(t.cmd) > 0 {
-			_, err = runCommand(t.cmd) // Execute cmd command
+			_, err = runCommand(t.cmd)
 		}
 		cancel()
-		fmt.Printf("\r\033[2K") // Clear spinner line
+		fmt.Printf("\r\033[2K") // clear spinner line
 
 		if verbose && err != nil {
-			fmt.Printf("%sCleaning: %s%s FINISHED\n  → %s\n", CYAN, t.desc, RC, err)
+			fmt.Printf("%sCleaning: %s%s FINISHED\n  -> %s\n", CYAN, t.desc, RC, err)
 		} else {
 			fmt.Printf("%sCleaning: %s%s FINISHED\n", CYAN, t.desc, RC)
 		}
 	}
+
+	// calculate freed disk space
 	endFree := getFreeMB()
 	diff := endFree - startFree
 	if diff < 0 {

@@ -85,12 +85,7 @@ func runCommand(cmd []string) (string, error) {
 
 	// If the command failed, return the output along with a formatted error
 	if err != nil {
-		return out, fmt.Errorf(
-			"command '%s' failed: %v\nOutput: %s",
-			strings.Join(cmd, " "), // Reconstruct the command for the error message
-			err,
-			out,
-		)
+		return out, fmt.Errorf("command failed: %v", err)
 	}
 
 	// If successful, return the output and nil error
