@@ -1,13 +1,10 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Build
+name: Build & Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-linux:
@@ -21,6 +18,9 @@ jobs:
       - name: Build Linux amd64
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o crunchycleaner ./src
 
+      - name: Run Test Linux
+        run: ./crunchycleaner -v
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -31,3 +31,6 @@ jobs:
 
       - name: Build Windows amd64
         run: go build -o crunchycleaner.exe ./src
+
+      - name: Run Test Windows
+        run: ./crunchycleaner.exe -v
