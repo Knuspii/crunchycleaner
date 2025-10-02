@@ -18,7 +18,10 @@ jobs:
       - name: Build Linux amd64
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o crunchycleaner ./src
 
-      - name: Run Test Linux
+      - name: Build Linux arm64
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o crunchycleaner-arm64 ./src
+
+      - name: Run CrunchyCleaner Linux
         run: ./crunchycleaner -v
 
   build-windows:
@@ -32,5 +35,5 @@ jobs:
       - name: Build Windows amd64
         run: go build -o crunchycleaner.exe ./src
 
-      - name: Run Test Windows
+      - name: Run CrunchyCleaner Windows
         run: ./crunchycleaner.exe -v
