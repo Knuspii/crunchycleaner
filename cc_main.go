@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	CC_VERSION = "1.5"
+	CC_VERSION = "1.6"
 	COLS       = 62
 	LINES      = 30
 	CMDWAIT    = 1 * time.Second // Wait time running a command
@@ -394,28 +394,28 @@ func handleMenu() {
 			switch menuItems[idx].Name {
 
 			case "Full-Clean":
-				printInfo("Selected Full-Cleanup")
+				printInfo("Selected: Full-Cleanup")
 				cmdline()
 				cleanup("full")
 				pause()
 				cc_exit()
 
 			case "Safe-Clean":
-				printInfo("Selected Safe-Cleanup")
+				printInfo("Selected: Safe-Cleanup")
 				cmdline()
 				cleanup("safe")
 				pause()
 				cc_exit()
 
 			case "User-Clean":
-				printInfo("Selected User-Cleanup")
+				printInfo("Selected: User-Cleanup")
 				cmdline()
 				cleanup("user")
 				pause()
 				cc_exit()
 
 			case "Info":
-				printInfo("Selected Info")
+				printInfo("Selected: Info")
 				cmdline()
 				showInfo()
 				pause()
