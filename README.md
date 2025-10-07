@@ -76,3 +76,7 @@ Options:
 
 > [!WARNING]
 > You use this tool at your own risk!
+
+## External Dependencies
+This project uses the following external dependencies:
+- **[github.com/eiannone/keyboard](https://github.com/eiannone/keyboard)** – used for cross-platform keyboard input (MIT License)
