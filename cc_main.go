@@ -7,7 +7,6 @@ package main
 
 import (
 	"bufio"     // For reading user input
-	"context"   // For controlling goroutines (e.g., stopping the spinner)
 	"fmt"       // Formatted input/output
 	"os"        // General OS interactions (exit, files, etc.)
 	"os/exec"   // Executing external commands
@@ -16,14 +15,15 @@ import (
 	"strings"   // String manipulation (Trim, Split, Join, etc.)
 	"syscall"   // System calls (for signal handling)
 	"time"      // Time-related functions (sleep, timestamp, timeout)
+
+	"github.com/eiannone/keyboard" // For capturing keyboard input (like key presses)
 )
 
 const (
-	CC_VERSION = "1.3"
+	CC_VERSION = "1.5"
 	COLS       = 62
 	LINES      = 30
-	CMDWAIT    = 1 * time.Second        // Wait time running a command
-	PROMPT     = (YELLOW + " >>:" + RC) // Prompt string displayed to the user
+	CMDWAIT    = 1 * time.Second // Wait time running a command
 	RED        = "\033[31m"
 	YELLOW     = "\033[33m"
 	GREEN      = "\033[32m"
@@ -34,7 +34,6 @@ const (
 
 var (
 	origCols, origLines int            // Original terminal size
-	consoleRunning      = true         // Controls main loop
 	verbose             = false        // If true, print all errors
 	skipPause           = false        // If true, skip pause
 	goos                = runtime.GOOS // Current OS
@@ -123,6 +122,31 @@ func getAdmin() {
 	}
 }
 
+func showInfo() {
+	fmt.Printf(`%sCrunchyCleaner Version: %s%s
+https://github.com/Knuspii/crunchycleaner
+
+DISCLAIMER:
+MADE BY: Knuspii, (M)
+Help by the World Wide Web.
+
+A lightweight, cross-platform system cleanup tool.
+You use this tool at your own risk.
+I do not take any responsibilities.
+
+System Requirements:
+- Windows or Linux
+- Terminal with ANSI escape code support
+
+This work is licensed under the:
+Creative Commons Attribution-
+NonCommercial 4.0 International License.
+
+This work uses the following external dependencies:
+- github.com/eiannone/keyboard (for cross-platform keyboard input)
+`, YELLOW, CC_VERSION, RC)
+}
+
 func getTermSize() (cols, lines int, err error) {
 	switch goos {
 	case "windows":
@@ -183,7 +207,8 @@ func restoreTerm() {
 
 func showBanner() {
 	total, free := getDiskInfo()
-	fmt.Printf(`%s  ____________________     .-.
+	fmt.Printf(`%s
+  ____________________     .-.
  |  |              |  |    |_|
  |[]|              |[]|    | |
  |  |              |  |    |=|
@@ -192,22 +217,11 @@ func showBanner() {
  |  |______________|  | |#######|
  |                    | |||||||||
  |     ____________   |
- |    | __      |  |  | CrunchyCleaner - Cleanup your system!
+ |    | __      |  |  | %sCrunchyCleaner - Cleanup your system!%s
  |    ||  |     |  |  | Made by: Knuspii, (M)
  |    ||__|     |  |  | Version: %s
  |____|_________|__|__| Disk-Space: %s / %s%s
-`, YELLOW, CC_VERSION, free, total, RC)
-	line()
-}
-
-func showCommands() {
-	fmt.Printf("Commands:\n")
-	fmt.Printf(" %s[fullclean]%s - Does a Full-Cleanup\n", YELLOW, RC)
-	fmt.Printf(" %s[safeclean]%s - Does a Safe-Cleanup\n", YELLOW, RC)
-	fmt.Printf(" %s[userclean]%s - Does a User-Cleanup\n", YELLOW, RC)
-	fmt.Printf(" %s[info]%s      - Shows some infos\n", YELLOW, RC)
-	fmt.Printf(" %s[reset]%s     - Reset the TUI\n", YELLOW, RC)
-	fmt.Printf(" %s[exit]%s      - Exit\n", RED, RC)
+`, YELLOW, RC, YELLOW, CC_VERSION, free, total, RC)
 	line()
 }
 
@@ -306,103 +320,145 @@ func handleargs() {
 	}
 }
 
-func handlecommands() {
-	fmt.Print("Enter command" + PROMPT)
-	cmd, _ := reader.ReadString('\n')
-	cmd = strings.TrimSpace(cmd)
-	cmdline()
-	switch cmd {
-	// FULL CLEAN
-	case "fullclean", ",full clean", "full cleanup", "clean full", "cleanup full":
-		cleanup("full")
-		pause()
-		consoleRunning = false
+// MenuItem defines a single menu entry.
+// "Name" is the internal identifier used in switch-case logic.
+// "Text" is what’s actually shown to the user in the menu.
+type MenuItem struct {
+	Name string // internal name for switch-case
+	Text string // visible text in the menu
+}
 
-	// SAFE CLEAN
-	case "safeclean", "safe clean", "safe cleanup", "clean safe", "cleanup safe":
-		cleanup("safe")
-		pause()
-		consoleRunning = false
+// All available menu items for the TUI.
+var menuItems = []MenuItem{
+	{"Full-Clean", "Full-Clean  - Does a Full-Cleanup"},
+	{"Safe-Clean", "Safe-Clean  - Does a Safe-Cleanup"},
+	{"User-Clean", "User-Clean  - Does a User-Cleanup"},
+	{"Info", "Info        - Shows some infos"},
+	{"Reset", "Reset       - Reset the TUI"},
+	{"Exit", "Exit        - Exit"},
+}
 
-	// USER CLEAN
-	case "userclean", "user clean", "user cleanup", "clean user", "cleanup user":
-		cleanup("user")
-		pause()
-		consoleRunning = false
+// handleMenu controls the interactive TUI (Text User Interface) menu.
+// It allows navigation with arrow keys or W/S, and executes actions on ENTER.
+func handleMenu() {
+	idx := 0 // current selected menu index
 
-	// HELP
-	case "help", "h":
-		printInfo("Just type a command from the list above")
-		pause()
+	// Open keyboard input in raw mode (captures single key presses)
+	err := keyboard.Open()
+	if err != nil {
+		panic(err)
+	}
+	defer keyboard.Close() // ensure cleanup when function exits
 
-	// INFO
-	case "i", "info", "infos", "about", "version":
-		fmt.Printf(`
-%sCrunchyCleaner Version: %s%s
+	for {
+		// Move cursor to line 16 and clear everything below that point
+		// (keeps the banner visible at the top)
+		fmt.Print("\033[16;0H")
+		fmt.Print("\033[J")
 
-DISCLAIMER:
-MADE BY: Knuspii, (M)
-Help by the World Wide Web.
-A lightweight, cross-platform system cleanup tool.
-You use this tool at your own risk.
-I do not take any responsibilities.
-This work is licensed under the:
-Creative Commons Attribution-
-NonCommercial 4.0 International License.
-https://github.com/Knuspii/crunchycleaner
-`, YELLOW, CC_VERSION, RC)
-		pause()
+		// Draw all menu items
+		for i, item := range menuItems {
+			if i == idx {
+				// Highlight the currently selected item
+				fmt.Printf(" %s>%s%s%s\n", CYAN, YELLOW, item.Text, RC)
+			} else {
+				fmt.Printf("  %s\n", item.Text)
+			}
+		}
 
-	// RESET
-	case "r", "reset", "refresh", "reload", "clear":
-		ctx, cancel := context.WithCancel(context.Background())
-		go asyncSpinner(ctx, "Reloading...")
-		time.Sleep(CMDWAIT)
-		cancel()
-		clearScreen()
-		getAdmin()
-		init_term()
-		showBanner()
-		showCommands()
+		line() // print separator line
+		fmt.Printf("Use ↑/↓ or W/S to navigate, ENTER to select\n")
 
-	// EXIT
-	case "e", "q", "quit", "exit":
-		ctx, cancel := context.WithCancel(context.Background())
-		go asyncSpinner(ctx, "Exiting...")
-		time.Sleep(CMDWAIT)
-		cancel()
-		fmt.Printf("\r\033[2K")
-		consoleRunning = false
+		// Wait for a key press
+		char, key, err := keyboard.GetKey()
+		if err != nil {
+			panic(err)
+		}
 
-	// DEFAULT
-	case "":
-		printInfo("Input a command")
-		pause()
-	default:
-		printInfo("Invalid command: " + cmd)
-		pause()
+		// Handle navigation and selection
+		switch {
+		case key == keyboard.KeyArrowUp || char == 'w' || char == 'W':
+			// Move selection up
+			if idx > 0 {
+				idx--
+			}
+
+		case key == keyboard.KeyArrowDown || char == 's' || char == 'S':
+			// Move selection down
+			if idx < len(menuItems)-1 {
+				idx++
+			}
+
+		case key == keyboard.KeyEnter:
+			// Perform action based on selected menu item
+			switch menuItems[idx].Name {
+
+			case "Full-Clean":
+				printInfo("Selected Full-Cleanup")
+				cmdline()
+				cleanup("full")
+				pause()
+				cc_exit()
+
+			case "Safe-Clean":
+				printInfo("Selected Safe-Cleanup")
+				cmdline()
+				cleanup("safe")
+				pause()
+				cc_exit()
+
+			case "User-Clean":
+				printInfo("Selected User-Cleanup")
+				cmdline()
+				cleanup("user")
+				pause()
+				cc_exit()
+
+			case "Info":
+				printInfo("Selected Info")
+				cmdline()
+				showInfo()
+				pause()
+				cc_exit()
+
+			case "Reset":
+				// Clear screen and reinitialize the TUI
+				clearScreen()
+				init_term()
+				showBanner()
+
+			case "Exit":
+				// Restore terminal and exit gracefully
+				cc_exit()
+			}
+		}
 	}
 }
 
+// main is the entry point of CrunchyCleaner.
+// It sets up arguments, handles signals (Ctrl+C), initializes the terminal,
+// and starts the main menu.
 func main() {
 	handleargs()
-	// Catch [Ctrl+C] and restore
+
+	// Catch [Ctrl+C] to restore the terminal before exiting
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		restoreTerm()
-		os.Exit(0)
+		cc_exit()
 	}()
-	getAdmin()
-	init_term()
-	showBanner()
-	showCommands()
 
-	for consoleRunning {
-		handlecommands()
-	}
-	restoreTerm()
-	printTask("EXITED\n")
-	os.Exit(0)
+	// Request admin/root privileges if needed
+	getAdmin()
+
+	// Initialize terminal (resize, save original size, etc.)
+	init_term()
+	clearScreen()
+
+	// Show program banner
+	showBanner()
+
+	// Start the interactive text menu
+	handleMenu()
 }

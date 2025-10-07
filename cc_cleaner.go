@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/eiannone/keyboard"
 )
 
 // task defines a cleanup action
@@ -49,8 +51,9 @@ func cleanFolder(desc, folder string) task {
 // cleanup orchestrates all cleanup tasks based on the mode (user/full/etc)
 // and optionally a username
 func cleanup(mode string, username ...string) {
+	printInfo(fmt.Sprintf("Starting cleanup in %s mode on %s", mode, goos))
+	askVerbose()
 	var tasks []task
-
 	switch mode {
 	case "user":
 		profile, ok := selectProfile(username)
@@ -61,8 +64,6 @@ func cleanup(mode string, username ...string) {
 	default:
 		tasks = buildSystemTasks(goos, mode)
 	}
-
-	askVerbose()
 	previewTasks(tasks)
 	runTasks(tasks)
 }
@@ -84,7 +85,7 @@ func selectProfile(username []string) (string, bool) {
 	if len(username) > 0 {
 		selectedProfile = username[0]
 		if !contains(profiles, selectedProfile) {
-			printError("Invalid profile name provided")
+			printError("No profile name provided")
 			if !skipPause {
 				pause()
 			}
@@ -95,12 +96,14 @@ func selectProfile(username []string) (string, bool) {
 		for _, p := range profiles {
 			fmt.Printf("  %s\n", p)
 		}
-		fmt.Printf("Enter profile name to clean%s", PROMPT)
+		fmt.Printf("Input profile name to clean:")
 		choice, _ := reader.ReadString('\n')
 		choice = strings.TrimSpace(choice)
 		if !contains(profiles, choice) {
 			printError("Invalid profile name provided")
-			pause()
+			if !skipPause {
+				pause()
+			}
 			os.Exit(1)
 		}
 		selectedProfile = choice
@@ -249,21 +252,41 @@ func buildLinuxTasks(mode string) []task {
 
 // ==================== EXECUTION ==================== //
 
-// askVerbose asks the user if verbose logging should be enabled
+// askVerbose asks the user if verbose logging should be enabled (keyboard version)
 func askVerbose() {
-	if !skipPause {
-		fmt.Print("Enable verbose logging? (yes/NO): ")
-		choice, _ := reader.ReadString('\n')
-		choice = strings.TrimSpace(strings.ToLower(choice))
-		if choice == "y" || choice == "yes" {
+	if skipPause {
+		return
+	}
+
+	fmt.Print("Enable verbose logging? (Y = YES, N = NO): ")
+
+	if err := keyboard.Open(); err != nil {
+		panic(err)
+	}
+	defer keyboard.Close()
+
+	for {
+		char, key, err := keyboard.GetKey()
+		if err != nil {
+			panic(err)
+		}
+
+		switch {
+		case char == 'y' || char == 'Y':
 			verbose = true
+			fmt.Printf("YES\n")
+			return
+		case char == 'n' || char == 'N' || key == keyboard.KeyEsc:
+			verbose = false
+			fmt.Printf("NO\n")
+			return
 		}
 	}
 }
 
 // previewTasks prints all tasks before execution
 func previewTasks(tasks []task) {
-	fmt.Println()
+	fmt.Printf("\n")
 	printInfo("The following cleanup tasks will be executed:")
 
 	for _, t := range tasks {
@@ -275,7 +298,7 @@ func previewTasks(tasks []task) {
 		}
 
 		// print task description and details
-		fmt.Printf("%s- Cleaning: %s%s\n  -> %s\n", CYAN, t.desc, RC, detail)
+		fmt.Printf("%sCleaning: %s%s\n  └─ %s\n", CYAN, t.desc, RC, detail)
 	}
 
 	printInfo("The above cleanup tasks will be executed")
@@ -316,7 +339,7 @@ func runTasks(tasks []task) {
 		fmt.Printf("\r\033[2K") // clear spinner line
 
 		if verbose && err != nil {
-			fmt.Printf("%sCleaning: %s%s FINISHED\n  -> %s\n", CYAN, t.desc, RC, err)
+			fmt.Printf("%sCleaning: %s%s FINISHED\n  └─ %s\n", CYAN, t.desc, RC, err)
 		} else {
 			fmt.Printf("%sCleaning: %s%s FINISHED\n", CYAN, t.desc, RC)
 		}

@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/eiannone/keyboard"
 )
 
 func printInfo(msg string) {
@@ -33,12 +35,42 @@ func cmdline() {
 	fmt.Printf("%s#%s~%s\n", RED, strings.Repeat("-", COLS-2), RC)
 }
 
-// Pause waits for enter
+func cc_exit() {
+	defer keyboard.Close()
+	restoreTerm()
+	printTask("CrunchyCleaner EXITED")
+	os.Exit(0)
+}
+
+// pause waits for the user to press ENTER before continuing.
+// Uses the "keyboard" library for non-blocking key detection.
 func pause() {
-	fmt.Printf("\nPress [ENTER] to continue: ")
-	reader.ReadString('\n')
-	fmt.Printf("\033[1A")   // Move cursor up one line
-	fmt.Printf("\r\033[2K") // Clear line
+	fmt.Printf("\nPress [ENTER] to continue...")
+
+	// Open keyboard input in raw mode (captures individual keypresses)
+	if err := keyboard.Open(); err != nil {
+		panic(err)
+	}
+	defer keyboard.Close() // make sure the keyboard gets properly closed after use
+
+	for {
+		// Read a single key press (character + special key)
+		_, key, err := keyboard.GetKey()
+		if err != nil {
+			panic(err)
+		}
+
+		// If ENTER is pressed, break out of the loop
+		if key == keyboard.KeyEnter {
+			break
+		}
+	}
+
+	// Move the cursor up one line
+	fmt.Printf("\033[1A")
+
+	// Clear the current line
+	fmt.Printf("\r\033[2K")
 }
 
 // asyncSpinner displays a spinning "loading" animation in the terminal.
