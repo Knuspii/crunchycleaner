@@ -7,23 +7,7 @@
 
 <h1>CrunchyCleaner 🧹</h1>
 
-<p align="center">
-<pre>
-  ____________________     .-.
- |  |              |  |    |_|
- |[]|              |[]|    | |
- |  |              |  |    |=|
- |  |              |  |  .=/I\=.
- |  |              |  | ////V\\\\
- |  |______________|  | |#######|
- |                    | |||||||||
- |     ____________   |
- |    | __      |  |  |
- |    ||  |     |  |  |
- |    ||__|     |  |  | CrunchyCleaner - Cleanup your system!
- |____|_________|__|__| Made by: Knuspii, (M)
-</pre>
-</p>
+![Preview](preview.png)
 
 ### ✨ A lightweight, cross-platform system cleanup tool
 CrunchyCleaner is made to be simple, easy and *very crunchy indeed!*\
