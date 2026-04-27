@@ -135,7 +135,7 @@ func pause() {
 
 // line draws a formatted horizontal separator
 func line() {
-	fmt.Printf("%s#%s~%s\n", YELLOW, strings.Repeat("-", COLS-2), RC)
+	fmt.Printf("%s#%s~%s\n", YELLOW, strings.Repeat("=", COLS-2), RC)
 }
 
 // spinner visualizes background tasks and cleans up properly
@@ -286,13 +286,13 @@ func getPrograms() []Program {
 				filepath.Join(home, cache, "chromium/*/Cache"),
 				filepath.Join(home, cache, "chromium/*/Code Cache"),
 				filepath.Join(home, flatpak, "com.google.Chrome/cache/chromium/*/Cache"),
-				filepath.Join(home, flatpak, "com.google.Chrome/cache/chromium/*/CodeCache"),
+				filepath.Join(home, flatpak, "com.google.Chrome/cache/chromium/*/Code Cache"),
 			}, false},
 			{"Edge Cache", []string{
 				filepath.Join(home, cache, "microsoft-edge/*/Cache"),
 				filepath.Join(home, cache, "microsoft-edge/*/Code Cache"),
 				filepath.Join(home, flatpak, "com.microsoft.Edge/cache/microsoft-edge/*/Cache"),
-				filepath.Join(home, flatpak, "com.microsoft.Edge/cache/microsoft-edge/*/CodeCache"),
+				filepath.Join(home, flatpak, "com.microsoft.Edge/cache/microsoft-edge/*/Code Cache"),
 			}, false},
 			{"Brave Cache", []string{
 				filepath.Join(home, cache, "BraveSoftware/Brave-Browser/*/Cache"),
@@ -342,10 +342,12 @@ func getPrograms() []Program {
 			}, false},
 			{"VS Code Cache", []string{
 				filepath.Join(home, ".config/Code/Cache"),
+				filepath.Join(home, ".config/Code/Code Cache"),
 				filepath.Join(home, ".config/Code/CachedData"),
 				filepath.Join(home, ".config/Code/GPUCache"),
 				filepath.Join(home, ".config/Code/User/workspaceStorage"),
 				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/Cache"),
+				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/Code Cache"),
 				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/CachedData"),
 				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/GPUCache"),
 				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/User/workspaceStorage"),

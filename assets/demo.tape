@@ -8,12 +8,12 @@ Set Padding 10
 Set WindowBar Colorful
 
 Hide
-  Type "export PATH=$PATH:$(pwd)/../bin && clear"
+  Type "cd ../bin && chmod +x crunchycleaner && clear"
   Enter
 Show
 
 # --- Start the TUI ---
-Type "crunchycleaner -d # This is a test run!"
+Type "./crunchycleaner -d # This is a test run!"
 Sleep 500ms
 Enter
 Sleep 2s # Wait for the TUI to render
