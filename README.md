@@ -9,7 +9,7 @@
 </p>
 
 <div align="center">
-<h1>CrunchyCleaner <img src="assets/logo.png" width="64" height="64" alt="Logo"></h1>
+<h1>CrunchyCleaner <img src="assets/logo.png" width="100" height="100" alt="Logo"></h1>
 <img src="assets/crunchycleaner-demo.gif" width="1000" height="1000" alt="Preview">
 </div>
 
@@ -27,7 +27,6 @@
 | **System** | System Logs, System Temp Folders, Thumbnail Cache, Shader Cache |
 | **Browsers** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
 | **Development** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
-| **Server** | coming soon* |
 | **Gaming** | Steam, Epic Games(Heroic) |
 | **Apps** | Discord, Spotify, Thunderbird, Telegram |
 
@@ -48,7 +47,7 @@ For Go (using go install):
 ```
 go install github.com/knuspii/crunchycleaner/v2@latest
 ```
-Or download binary:
+Or download the binary and just run it:
 [[Download here]](https://github.com/knuspii/crunchycleaner/releases)
 
 ### 🎖️ Featured on
@@ -66,7 +65,7 @@ Or download binary:
   -v    Display version information
 ```
 
-If you use a terminal emulator (kitty, konsole) you might want to use the `-t` flag.
+If you use a terminal emulator (e.g. kitty, konsole) you might want to use the `-t` flag.
 
 ---
 
