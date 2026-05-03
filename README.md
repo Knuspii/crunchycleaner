@@ -65,7 +65,7 @@ Or download the binary and just run it:
   -v    Display version information
 ```
 
-If you use a terminal emulator (e.g. kitty, konsole) you might want to use the `-t` flag.
+If you only use a terminal, you might want to use the `-t` flag.
 
 ---
 
