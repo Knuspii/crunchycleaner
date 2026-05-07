@@ -9,7 +9,7 @@
 </p>
 
 <div align="center">
-<h1>CrunchyCleaner <img src="assets/logo.png" width="64" height="64" alt="Logo"></h1>
+<h1>CrunchyCleaner <img src="assets/logo.png" width="100" height="100" alt="Logo"></h1>
 <img src="assets/crunchycleaner-demo.gif" width="1000" height="1000" alt="Preview">
 </div>
 
@@ -26,26 +26,28 @@
 | :--- | :--- |
 | **System** | System Logs, System Temp Folders, Thumbnail Cache, Shader Cache |
 | **Browsers** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
-| **Development** | Visual Studio Code, Go Cache, Pip Cache, NPM Cache, Yarn Cache, Cargo Cache |
-| **Server** | coming soon* |
+| **Development** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
 | **Gaming** | Steam, Epic Games(Heroic) |
 | **Apps** | Discord, Spotify, Thunderbird, Telegram |
 
 **Flatpak is supported** \
 **Snap is not supported**
 
-## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/Knuspii/crunchycleaner/total?color=green)
-Paste this into your terminal. \
-Linux (using sudo):
+## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)
+Paste this into your terminal and restart it afterwards. \
+For Linux (using sudo):
 ```
 curl -L https://github.com/Knuspii/CrunchyCleaner/releases/latest/download/crunchycleaner -o cc && sudo install -m 755 cc /usr/local/bin/crunchycleaner && rm cc
 ```
-Windows (using Powershell as Admin):
+For Windows (using Powershell as Admin):
 ```
 iwr https://github.com/Knuspii/CrunchyCleaner/releases/latest/download/crunchycleaner.exe -OutFile cc.exe; mv -Force cc.exe $env:SystemRoot\System32\crunchycleaner.exe
 ```
-
-Download binary:
+For Go (using go install):
+```
+go install github.com/knuspii/crunchycleaner/v2@latest
+```
+Or download the binary and just run it:
 [[Download here]](https://github.com/knuspii/crunchycleaner/releases)
 
 ### 🎖️ Featured on
@@ -63,7 +65,7 @@ Download binary:
   -v    Display version information
 ```
 
-If you use a terminal emulator (kitty, konsole) you might wann use the `-t` flag.
+If you only use a terminal, you might want to use the `-t` flag.
 
 ---
 
@@ -91,3 +93,4 @@ CrunchyCleaner is also available on SourceForge \
 ### External Dependencies
 This project uses the following external dependencies:
 - **[github.com/eiannone/keyboard](https://github.com/eiannone/keyboard)** – used for cross-platform keyboard input (MIT License)
+- **[github.com/shirou/gopsutil](https://github.com/shirou/gopsutil)** – used for cross-platform system and hardware metrics (BSD 3-Clause License)

@@ -1,19 +1,19 @@
 # Output settings
 Output crunchycleaner-demo.gif
 Set FontSize 17
-Set Width 1200
+Set Width 800
 Set Height 600
 Set TypingSpeed 100ms
 Set Padding 10
 Set WindowBar Colorful
 
 Hide
-  Type "export PATH=$PATH:$(pwd)/../bin && clear"
+  Type "cd ../bin && chmod +x crunchycleaner && clear"
   Enter
 Show
 
 # --- Start the TUI ---
-Type "crunchycleaner -d # This is a test run!"
+Type "./crunchycleaner -d # This is a test run!"
 Sleep 500ms
 Enter
 Sleep 2s # Wait for the TUI to render
