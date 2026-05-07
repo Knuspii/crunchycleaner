@@ -84,7 +84,7 @@ func initApp() {
 		fmt.Sscanf(strings.TrimSpace(string(out)), "%d %d", &origCols, &origLines)
 
 	} else {
-		cmd := exec.Command("stty size < /dev/tty")
+		cmd := exec.Command("sh", "-c", "stty size < /dev/tty")
 
 		out, _ := cmd.Output()
 		fmt.Sscanf(strings.TrimSpace(string(out)), "%d %d", &origLines, &origCols)
