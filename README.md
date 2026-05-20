@@ -34,8 +34,7 @@
 **Snap is not supported**
 
 ## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)
-Paste this into your terminal and restart it afterwards. \
-After that you can just type `crunchycleaner -v` into your terminal to verify it's installed. \
+Paste the corresponding command into your terminal and restart it afterwards. \
 For Linux (using sudo):
 ```
 curl -L https://github.com/Knuspii/CrunchyCleaner/releases/latest/download/crunchycleaner -o cc && sudo install -m 755 cc /usr/local/bin/crunchycleaner && rm cc
@@ -48,13 +47,10 @@ For Go (using go install):
 ```
 go install github.com/knuspii/crunchycleaner/v2@latest
 ```
-Or download the binary and just run it:
-[[Download here]](https://github.com/knuspii/crunchycleaner/releases)
+After that you can just type `crunchycleaner -v` into your terminal to verify it's installed. \
 
-### 🎖️ Featured on
-[![Awesome TUIs](https://img.shields.io/badge/Awesome-TUIs-orange?style=flat-square)](https://github.com/rothgar/awesome-tuis)
-[![Awesome Go](https://img.shields.io/badge/Awesome-Go-blue?style=flat-square)](https://github.com/avelino/awesome-go)
-[![Awesome Windows](https://img.shields.io/badge/Awesome-Windows-blueviiet?style=flat-square)](https://github.com/0PandaDEV/awesome-windows)
+Or download the binary and just run/open it:
+[[Download here]](https://github.com/knuspii/crunchycleaner/releases)
 
 ---
 
@@ -90,6 +86,11 @@ If you only use a terminal, you might want to use the `-t` flag.
 CrunchyCleaner is also available on SourceForge \
 [![Download CrunchyCleaner](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
 [![Download CrunchyCleaner](https://img.shields.io/sourceforge/dt/crunchycleaner.svg)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
+
+### 🎖️ Featured on
+[![Awesome TUIs](https://img.shields.io/badge/Awesome-TUIs-orange?style=flat-square)](https://github.com/rothgar/awesome-tuis)
+[![Awesome Go](https://img.shields.io/badge/Awesome-Go-blue?style=flat-square)](https://github.com/avelino/awesome-go)
+[![Awesome Windows](https://img.shields.io/badge/Awesome-Windows-blueviiet?style=flat-square)](https://github.com/0PandaDEV/awesome-windows)
 
 ### External Dependencies
 This project uses the following external dependencies:
