@@ -60,11 +60,8 @@ Or download the binary and just run/open it:
 ```
   -a    Automate cleaning (select all and start immediately)
   -d    Simulation mode without deleting files (for testing)
-  -t    Skip terminal resizing and environment initialization
   -v    Display version information
 ```
-
-If you only use a terminal, you might want to use the `-t` flag.
 
 ---
 
