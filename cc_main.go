@@ -24,7 +24,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
@@ -39,8 +38,8 @@ import (
 
 // Global constants for UI and Versioning
 const (
-	CC_VERSION  = "2.6"
-	COLS        = 62
+	CC_VERSION  = "2.7"
+	COLS        = 60
 	LINES       = 32
 	GOOS        = runtime.GOOS
 	CLEARLINE   = "\r\033[K"
@@ -52,10 +51,8 @@ const (
 )
 
 var (
-	origCols, origLines int
 	// CLI Flags
 	Flagversion = flag.Bool("v", false, "Display version information")
-	Flagnoinit  = flag.Bool("t", false, "Skip terminal resizing and environment initialization")
 	Flagdryrun  = flag.Bool("d", false, "Simulation mode without deleting files (for testing)")
 	Flagauto    = flag.Bool("a", false, "Automate cleaning (select all and start immediately)")
 )
@@ -69,48 +66,6 @@ type Program struct {
 
 // ========================= HELPER FUNCTIONS =========================
 
-// initApp prepares the terminal environment (Title, Resize, User Info)
-func initApp() {
-	fmt.Printf("Initializing CrunchyCleaner %s...\n", CC_VERSION)
-
-	// Get current terminal size
-	if GOOS == "windows" {
-		cmd := exec.Command(
-			"powershell", "-NoProfile", "-Command",
-			"$s=$Host.UI.RawUI.WindowSize; Write-Output \"$($s.Width) $($s.Height)\"",
-		)
-
-		out, _ := cmd.Output()
-		fmt.Sscanf(strings.TrimSpace(string(out)), "%d %d", &origCols, &origLines)
-
-	} else {
-		cmd := exec.Command("sh", "-c", "stty size < /dev/tty")
-
-		out, _ := cmd.Output()
-		fmt.Sscanf(strings.TrimSpace(string(out)), "%d %d", &origLines, &origCols)
-	}
-
-	// Clear screen
-	if GOOS == "windows" {
-		// Windows CMD requires an external call to 'cls'
-		cmd := exec.Command("cls")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	} else {
-		cmd := exec.Command("clear")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-
-	}
-	// Fallback use ANSI escape sequences
-	fmt.Print(CLEARSCREEN)
-
-	// Set Terminal Title via ANSI sequence
-	fmt.Printf("\033]0;CrunchyCleaner %s\007", CC_VERSION)
-	// Resize terminal
-	terminalresize(COLS, LINES)
-}
-
 // cc_exit provides a clean termination of the application
 func cc_exit() {
 	// Close keyboard
@@ -118,11 +73,6 @@ func cc_exit() {
 
 	// Enable cursor
 	fmt.Print("\033[?25h")
-
-	// Restore size
-	if !*Flagnoinit && !*Flagauto {
-		terminalresize(origCols, origLines)
-	}
 
 	fmt.Printf("\nExiting CrunchyCleaner...\n")
 	os.Exit(0)
@@ -158,24 +108,6 @@ func spinner(text string, stop chan bool, ack chan bool) {
 	}
 }
 
-func terminalresize(w int, h int) {
-	// OS-specific Terminal Resizing
-	if GOOS == "windows" {
-		psCmd := fmt.Sprintf(
-			`$w=(Get-Host).UI.RawUI; 
-				$newSize=New-Object System.Management.Automation.Host.Size(%d,%d); 
-				$newBuffer=New-Object System.Management.Automation.Host.Size(%d,999); 
-				$w.BufferSize=$newBuffer; 
-				$w.WindowSize=$newSize`,
-			w, h, w,
-		)
-		exec.Command("powershell", "-NoProfile", "-Command", psCmd).Run()
-	}
-
-	// Generic ANSI resize fallback for modern terminals
-	fmt.Printf("\033[8;%d;%dt", h, w)
-}
-
 // ========================= PROGRAMS =========================
 
 func getPrograms() []Program {
@@ -197,6 +129,7 @@ func getPrograms() []Program {
 			{"Update Logs (Admin)", []string{filepath.Join(winDir, "SoftwareDistribution/Download")}, false},
 			{"User Temp Folder", []string{filepath.Join(localAppData, "Temp")}, false},
 			{"Thumbnail Cache", []string{filepath.Join(localAppData, "Microsoft/Windows/Explorer")}, false},
+			{"Shell History", []string{filepath.Join(appData, "Microsoft/Windows/PowerShell/PSReadLine")}, false},
 			{"Firefox Cache", []string{
 				filepath.Join(localAppData, "Mozilla/Firefox/Profiles/*/cache2"),
 				filepath.Join(localAppData, "Mozilla/Firefox/Profiles/*/jumpListCache"),
@@ -278,6 +211,7 @@ func getPrograms() []Program {
 			{"System Logs (Root)", []string{"/var/log/*.log"}, false},
 			{"System Temp Folders (Root)", []string{"/tmp"}, false},
 			{"Thumbnail Cache", []string{filepath.Join(home, cache, "thumbnails")}, false},
+			{"Shell History", []string{filepath.Join(home, "*_history")}, false},
 			{"Firefox Cache", []string{
 				filepath.Join(home, cache, "mozilla/firefox/*/cache2"),
 				filepath.Join(home, flatpak, "org.mozilla.firefox/cache/mozilla/firefox/*/cache2"),
@@ -466,8 +400,8 @@ func logWarn(msg string) { fmt.Printf("%s[!] %s%s\n", YELLOW, msg, RC) }
 func renderMenu(existing []Program, idx int, fullRedraw bool) {
 	if fullRedraw {
 		showBanner()
-		fmt.Printf("Use ↑/↓ or W/S to navigate | [ENTER] to select | [C] to clean\n")
-		fmt.Printf("Folders found: [%d]\n", len(existing))
+		fmt.Printf("↑/↓ or W/S to navigate | [ENTER] to select | [C] to clean\n")
+		fmt.Printf("Folders found: %d\n", len(existing))
 	}
 
 	// Render each detected program entry
@@ -721,10 +655,6 @@ func main() {
 	if *Flagversion {
 		fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
 		return
-	}
-
-	if !*Flagnoinit && !*Flagauto {
-		initApp()
 	}
 
 	// AUTOMATION LOGIC
