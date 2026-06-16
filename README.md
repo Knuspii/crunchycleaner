@@ -33,6 +33,8 @@
 **Flatpak is supported** \
 **Snap is not supported**
 
+---
+
 ## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)
 Paste the corresponding command into your terminal and restart it afterwards. \
 For Linux (using sudo):
@@ -47,7 +49,7 @@ For Go (using go install):
 ```
 go install github.com/knuspii/crunchycleaner/v2@latest
 ```
-After that you can just type `crunchycleaner -v` into your terminal to verify it's installed. \
+After that you can just type `crunchycleaner -v` into your terminal to verify it's installed.
 
 Or download the binary and just run/open it:
 [[Download here]](https://github.com/knuspii/crunchycleaner/releases)
