@@ -69,7 +69,7 @@ Or download the binary and just run/open it:
 > You use this tool at your own risk!
 
 > [!NOTE]
-> AI was used for this project in some parts.
+> AI was used for this project in some parts. BUT THIS IS NOT VIBECODED!
 
 ## Q&A
 **Q:** Will this break my system? \
@@ -84,7 +84,7 @@ Or download the binary and just run/open it:
 ## Other Downloads
 CrunchyCleaner is also available on SourceForge \
 [![Download CrunchyCleaner](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
-[![Download CrunchyCleaner](https://img.shields.io/sourceforge/dt/crunchycleaner.svg)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
+[![Total Downloads](https://img.shields.io/sourceforge/dt/crunchycleaner.svg)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
 
 ### 🎖️ Featured on
 [![Awesome TUIs](https://img.shields.io/badge/Awesome-TUIs-orange?style=flat-square)](https://github.com/rothgar/awesome-tuis)
