@@ -24,7 +24,7 @@
 ### Supported Software List:
 | Category | Software / Path |
 | :--- | :--- |
-| **System** | System Logs, System Temp Folders, Thumbnail Cache, Shader Cache |
+| **System** | System Logs, System Temp, Thumbnail, Shell History, Package Managers, Shader Cache |
 | **Browsers** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
 | **Development** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
 | **Gaming** | Steam, Epic Games(Heroic) |
