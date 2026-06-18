@@ -13,7 +13,7 @@ echo "Formatting Go source files..."
 gofmt -s -w ../.
 echo "Formatting done."
 
-mkdir ../bin/
+mkdir -p ../bin/
 
 echo "Building CrunchyCleaner for Windows amd64..."
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ../bin/crunchycleaner.exe ../.
