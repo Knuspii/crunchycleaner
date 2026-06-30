@@ -37,6 +37,7 @@
 
 ## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)
 Paste the corresponding command into your terminal and restart it afterwards. \
+**Or download the binary and just run/open it: [[Download here]](https://github.com/knuspii/crunchycleaner/releases)** \
 For Linux (using sudo):
 ```
 curl -L https://github.com/Knuspii/CrunchyCleaner/releases/latest/download/crunchycleaner -o cc && sudo install -m 755 cc /usr/local/bin/crunchycleaner && rm cc
@@ -50,9 +51,6 @@ For Go (using go install):
 go install github.com/knuspii/crunchycleaner/v2@latest
 ```
 After that you can just type `crunchycleaner -v` into your terminal to verify it's installed.
-
-Or download the binary and just run/open it:
-[[Download here]](https://github.com/knuspii/crunchycleaner/releases)
 
 ---
 
