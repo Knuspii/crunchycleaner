@@ -24,20 +24,21 @@
 ### Supported Software List:
 | Category | Software / Path |
 | :--- | :--- |
-| **System** | System Logs, System Temp, Thumbnail, Shell History, Package Managers, Shader Cache |
-| **Browsers** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
-| **Development** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
-| **Gaming** | Steam, Epic Games(Heroic) |
-| **Apps** | Discord, Spotify, Thunderbird, Telegram |
+| **System:** | System Logs, System Temp, Thumbnail, Shell History, Package Managers, Shader Cache |
+| **Browsers:** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
+| **Development:** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
+| **Gaming:** | Steam, Epic Games(Heroic) |
+| **Apps:** | Discord, Spotify, Thunderbird, Telegram |
 
 **Flatpak is supported** \
-**Snap is not supported**
+**Snap is NOT supported**
 
 ---
 
 ## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)
-Paste the corresponding command into your terminal and restart it afterwards. \
-**Or download the binary and just run/open it: [[Download here]](https://github.com/knuspii/crunchycleaner/releases)** \
+**Download the latest binary and just run/open it: [[Download here]](https://github.com/knuspii/crunchycleaner/releases)** \
+Or üaste the corresponding command into your terminal and restart it afterwards to fully install it. \
+\
 For Linux (using sudo):
 ```
 curl -L https://github.com/Knuspii/CrunchyCleaner/releases/latest/download/crunchycleaner -o cc && sudo install -m 755 cc /usr/local/bin/crunchycleaner && rm cc
@@ -81,8 +82,11 @@ After that you can just type `crunchycleaner -v` into your terminal to verify it
 
 ## Other Downloads
 CrunchyCleaner is also available on SourceForge \
+\
 [![Download CrunchyCleaner](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
 [![Total Downloads](https://img.shields.io/sourceforge/dt/crunchycleaner.svg)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
+
+---
 
 ### 🎖️ Featured on
 [![Awesome TUIs](https://img.shields.io/badge/Awesome-TUIs-orange?style=flat-square)](https://github.com/rothgar/awesome-tuis)
