@@ -1,11 +1,16 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg" />
-  <a href="https://goreportcard.com/report/github.com/knuspii/crunchycleaner/v2"><img src="https://goreportcard.com/badge/github.com/knuspii/crunchycleaner/v2" alt="Go Report Card" /></a>
-  <a href="https://github.com/knuspii/crunchycleaner/actions/workflows/go.yml"><img src="https://github.com/knuspii/crunchycleaner/actions/workflows/go.yml/badge.svg" alt="Build" /></a>
-  <a href="https://github.com/knuspii/crunchycleaner/stargazers"><img src="https://img.shields.io/github/stars/knuspii/crunchycleaner?style=social" alt="GitHub Stars" /></a>
-  <br>
-  <img src="https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green?" />
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-blue?logo=linux&logoColor=white" alt="Platform" />
+  <a href="https://github.com/knuspii/crunchycleaner/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/knuspii/crunchycleaner/go.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build&labelColor=111111&color=00c853" alt="Build">
+  </a>
+  <a href="https://github.com/knuspii/crunchycleaner/releases">
+    <img src="https://img.shields.io/github/v/release/knuspii/crunchycleaner?style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=111111&color=ff6d00" alt="Release">
+  </a>
+  <a href="https://github.com/knuspii/crunchycleaner/releases">
+    <img src="https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=111111&color=8e24aa" alt="Downloads">
+  </a>
+  <a href="https://github.com/knuspii/crunchycleaner">
+    <img src="https://img.shields.io/github/stars/knuspii/crunchycleaner?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=111111&color=fbc02d" alt="Stars">
+  </a>
 </p>
 
 <div align="center">
