@@ -42,7 +42,7 @@
 
 ## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)
 **Download the latest binary and just run/open it: [[Download here]](https://github.com/knuspii/crunchycleaner/releases)** \
-Or üaste the corresponding command into your terminal and restart it afterwards to fully install it. \
+Or paste the corresponding command into your terminal and restart it afterwards to fully install it. \
 \
 For Linux (using sudo):
 ```
