@@ -24,7 +24,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
@@ -34,13 +33,12 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
-	"github.com/shirou/gopsutil/v3/disk"
 )
 
 // Global constants for UI and Versioning
 const (
-	CC_VERSION  = "2.6"
-	COLS        = 62
+	CC_VERSION  = "2.7"
+	COLS        = 60
 	LINES       = 32
 	GOOS        = runtime.GOOS
 	CLEARLINE   = "\r\033[K"
@@ -52,10 +50,8 @@ const (
 )
 
 var (
-	origCols, origLines int
 	// CLI Flags
 	Flagversion = flag.Bool("v", false, "Display version information")
-	Flagnoinit  = flag.Bool("t", false, "Skip terminal resizing and environment initialization")
 	Flagdryrun  = flag.Bool("d", false, "Simulation mode without deleting files (for testing)")
 	Flagauto    = flag.Bool("a", false, "Automate cleaning (select all and start immediately)")
 )
@@ -69,48 +65,6 @@ type Program struct {
 
 // ========================= HELPER FUNCTIONS =========================
 
-// initApp prepares the terminal environment (Title, Resize, User Info)
-func initApp() {
-	fmt.Printf("Initializing CrunchyCleaner %s...\n", CC_VERSION)
-
-	// Get current terminal size
-	if GOOS == "windows" {
-		cmd := exec.Command(
-			"powershell", "-NoProfile", "-Command",
-			"$s=$Host.UI.RawUI.WindowSize; Write-Output \"$($s.Width) $($s.Height)\"",
-		)
-
-		out, _ := cmd.Output()
-		fmt.Sscanf(strings.TrimSpace(string(out)), "%d %d", &origCols, &origLines)
-
-	} else {
-		cmd := exec.Command("sh", "-c", "stty size < /dev/tty")
-
-		out, _ := cmd.Output()
-		fmt.Sscanf(strings.TrimSpace(string(out)), "%d %d", &origLines, &origCols)
-	}
-
-	// Clear screen
-	if GOOS == "windows" {
-		// Windows CMD requires an external call to 'cls'
-		cmd := exec.Command("cls")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	} else {
-		cmd := exec.Command("clear")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-
-	}
-	// Fallback use ANSI escape sequences
-	fmt.Print(CLEARSCREEN)
-
-	// Set Terminal Title via ANSI sequence
-	fmt.Printf("\033]0;CrunchyCleaner %s\007", CC_VERSION)
-	// Resize terminal
-	terminalresize(COLS, LINES)
-}
-
 // cc_exit provides a clean termination of the application
 func cc_exit() {
 	// Close keyboard
@@ -118,11 +72,6 @@ func cc_exit() {
 
 	// Enable cursor
 	fmt.Print("\033[?25h")
-
-	// Restore size
-	if !*Flagnoinit && !*Flagauto {
-		terminalresize(origCols, origLines)
-	}
 
 	fmt.Printf("\nExiting CrunchyCleaner...\n")
 	os.Exit(0)
@@ -158,285 +107,6 @@ func spinner(text string, stop chan bool, ack chan bool) {
 	}
 }
 
-func terminalresize(w int, h int) {
-	// OS-specific Terminal Resizing
-	if GOOS == "windows" {
-		psCmd := fmt.Sprintf(
-			`$w=(Get-Host).UI.RawUI; 
-				$newSize=New-Object System.Management.Automation.Host.Size(%d,%d); 
-				$newBuffer=New-Object System.Management.Automation.Host.Size(%d,999); 
-				$w.BufferSize=$newBuffer; 
-				$w.WindowSize=$newSize`,
-			w, h, w,
-		)
-		exec.Command("powershell", "-NoProfile", "-Command", psCmd).Run()
-	}
-
-	// Generic ANSI resize fallback for modern terminals
-	fmt.Printf("\033[8;%d;%dt", h, w)
-}
-
-// ========================= PROGRAMS =========================
-
-func getPrograms() []Program {
-	if runtime.GOOS == "windows" {
-		// Windows
-		home, _ := os.UserHomeDir()
-		appData := os.Getenv("APPDATA")
-		localAppData := os.Getenv("LOCALAPPDATA")
-		programFilesX86 := os.Getenv("ProgramFiles(x86)")
-		programFiles := os.Getenv("ProgramFiles")
-		winDir := os.Getenv("WINDIR")
-		return []Program{
-			{"System Logs (Admin)", []string{
-				filepath.Join(winDir, "Panther"),
-				filepath.Join(winDir, "Logs"),
-			}, false},
-			{"Font Cache (Admin)", []string{filepath.Join(winDir, "ServiceProfiles/LocalService/AppData/Local/FontCache")}, false},
-			{"System Temp Folders (Admin)", []string{filepath.Join(winDir, "Temp")}, false},
-			{"Update Logs (Admin)", []string{filepath.Join(winDir, "SoftwareDistribution/Download")}, false},
-			{"User Temp Folder", []string{filepath.Join(localAppData, "Temp")}, false},
-			{"Thumbnail Cache", []string{filepath.Join(localAppData, "Microsoft/Windows/Explorer")}, false},
-			{"Firefox Cache", []string{
-				filepath.Join(localAppData, "Mozilla/Firefox/Profiles/*/cache2"),
-				filepath.Join(localAppData, "Mozilla/Firefox/Profiles/*/jumpListCache"),
-				filepath.Join(appData, "Mozilla/Firefox/Profiles/*/shader-cache"),
-			}, false},
-			{"Chrome Cache", []string{
-				filepath.Join(localAppData, "Google/Chrome/User Data/Default/Cache"),
-				filepath.Join(localAppData, "Google/Chrome/User Data/Default/Code Cache"),
-				filepath.Join(localAppData, "Google/Chrome/User Data/*/Cache"),
-				filepath.Join(localAppData, "Google/Chrome/User Data/Default/Media Cache"),
-			}, false},
-			{"Edge Cache", []string{
-				filepath.Join(localAppData, "Microsoft/Edge/User Data/Default/Cache"),
-				filepath.Join(localAppData, "Microsoft/Edge/User Data/*/Cache"),
-				filepath.Join(localAppData, "Microsoft/Edge/User Data/Default/Media Cache"),
-			}, false},
-			{"Brave Cache", []string{
-				filepath.Join(localAppData, "BraveSoftware/Brave-Browser/User Data/Default/Cache"),
-				filepath.Join(localAppData, "BraveSoftware/Brave-Browser/User Data/*/Cache"),
-				filepath.Join(localAppData, "BraveSoftware/Brave-Browser/User Data/Default/Media Cache"),
-			}, false},
-			{"Opera Cache", []string{
-				filepath.Join(localAppData, "Opera Software/Opera Stable/Cache"),
-				filepath.Join(localAppData, "Opera Software/Opera Stable/Code Cache"),
-			}, false},
-			{"Thunderbird Cache", []string{
-				filepath.Join(localAppData, "Thunderbird/Profiles/*/cache2"),
-			}, false},
-			{"Steam Cache", []string{
-				filepath.Join(programFilesX86, "Steam/appcache"),
-				filepath.Join(programFiles, "Steam/appcache"),
-				filepath.Join(localAppData, "Steam/htmlcache"),
-			}, false},
-			{"Epic Games Cache", []string{filepath.Join(localAppData, "EpicGamesLauncher/Saved/webcache")}, false},
-			{"Discord Cache", []string{
-				filepath.Join(appData, "discord/Cache"),
-				filepath.Join(appData, "discord/Code Cache"),
-				filepath.Join(appData, "discord/GPUCache"),
-			}, false},
-			{"Telegram Cache", []string{filepath.Join(appData, "Telegram Desktop/tdata/user_data/cache")}, false},
-			{"Spotify Cache", []string{filepath.Join(localAppData, "Spotify/Storage")}, false},
-			{"VS Code Cache", []string{
-				filepath.Join(appData, "Code/Cache"),
-				filepath.Join(appData, "Code/CachedData"),
-				filepath.Join(appData, "Code/CachedExtensionVSIXs"),
-				filepath.Join(appData, "Code/User/workspaceStorage"),
-				filepath.Join(appData, "Code/GPUCache"),
-			}, false},
-			{"JetBrains IDE Cache", []string{filepath.Join(localAppData, "JetBrains/*/system/caches")}, false},
-			{"Slack Cache", []string{
-				filepath.Join(appData, "Slack/Cache"),
-				filepath.Join(appData, "Slack/Code Cache"),
-				filepath.Join(appData, "Slack/GPUCache"),
-			}, false},
-			{"Shader Cache", []string{
-				filepath.Join(localAppData, "D3DSCache"),
-				filepath.Join(localAppData, "NVIDIA/GLCache"),
-			}, false},
-			{"Go Build Cache", []string{filepath.Join(localAppData, "go-build")}, false},
-			{"Pip Cache", []string{filepath.Join(localAppData, "pip/Cache")}, false},
-			{"NPM Cache", []string{filepath.Join(appData, "npm-cache/_cacache")}, false},
-			{"Yarn Cache", []string{
-				filepath.Join(localAppData, "Yarn/Cache"),
-				filepath.Join(appData, "Yarn/Cache"),
-			}, false},
-			{"Cargo Cache", []string{
-				filepath.Join(home, ".cargo/registry/cache"),
-				filepath.Join(home, ".cargo/git/db"),
-			}, false},
-			{"NuGet Cache", []string{filepath.Join(home, ".nuget/packages")}, false},
-			{"Gradle Cache", []string{filepath.Join(home, ".gradle/caches")}, false},
-		}
-	} else {
-		// Linux
-		home, _ := os.UserHomeDir()
-		cache := ".cache/"
-		flatpak := ".var/app/"
-		return []Program{
-			{"System Logs (Root)", []string{"/var/log/*.log"}, false},
-			{"System Temp Folders (Root)", []string{"/tmp"}, false},
-			{"Thumbnail Cache", []string{filepath.Join(home, cache, "thumbnails")}, false},
-			{"Firefox Cache", []string{
-				filepath.Join(home, cache, "mozilla/firefox/*/cache2"),
-				filepath.Join(home, flatpak, "org.mozilla.firefox/cache/mozilla/firefox/*/cache2"),
-			}, false},
-			{"Chromium Cache", []string{
-				filepath.Join(home, cache, "chromium/*/Cache"),
-				filepath.Join(home, cache, "chromium/*/Code Cache"),
-				filepath.Join(home, flatpak, "com.google.Chrome/cache/chromium/*/Cache"),
-				filepath.Join(home, flatpak, "com.google.Chrome/cache/chromium/*/Code Cache"),
-			}, false},
-			{"Edge Cache", []string{
-				filepath.Join(home, cache, "microsoft-edge/*/Cache"),
-				filepath.Join(home, cache, "microsoft-edge/*/Code Cache"),
-				filepath.Join(home, flatpak, "com.microsoft.Edge/cache/microsoft-edge/*/Cache"),
-				filepath.Join(home, flatpak, "com.microsoft.Edge/cache/microsoft-edge/*/Code Cache"),
-			}, false},
-			{"Brave Cache", []string{
-				filepath.Join(home, cache, "BraveSoftware/Brave-Browser/*/Cache"),
-				filepath.Join(home, cache, "BraveSoftware/Brave-Browser/*/Code Cache"),
-				filepath.Join(home, flatpak, "com.brave.Browser/cache/Brave-Browser/*/Cache"),
-				filepath.Join(home, flatpak, "com.brave.Browser/cache/Brave-Browser/*/Code Cache"),
-			}, false},
-			{"Opera Cache", []string{
-				filepath.Join(home, cache, "opera/Cache"),
-				filepath.Join(home, ".config/opera/Cache"),
-				filepath.Join(home, flatpak, "com.opera.Opera/cache/opera/Cache"),
-				filepath.Join(home, flatpak, "com.opera.Opera/config/opera/Cache"),
-			}, false},
-			{"Thunderbird Cache", []string{
-				filepath.Join(home, cache, "thunderbird/*/cache2"),
-				filepath.Join(home, flatpak, "org.mozilla.Thunderbird/cache/mozilla/Thunderbird/*/cache2"),
-			}, false},
-			{"Steam Cache", []string{
-				filepath.Join(home, ".steam/steam/appcache"),
-				filepath.Join(home, ".local/share/Steam/appcache"),
-				filepath.Join(home, ".local/share/Steam/config/htmlcache"),
-				filepath.Join(home, flatpak, "com.valvesoftware.Steam/steam/steam/appcache"),
-				filepath.Join(home, flatpak, "com.valvesoftware.Steam/.local/share/Steam/appcache"),
-				filepath.Join(home, flatpak, "com.valvesoftware.Steam/.local/share/Steam/config/htmlcache"),
-			}, false},
-			{"Epic Games (Heroic/Lutris) Cache", []string{
-				filepath.Join(home, ".config/heroic/WebCache"),
-				filepath.Join(home, ".local/share/lutris/runtime"),
-				filepath.Join(home, flatpak, "com.heroicgameslauncher.hgl/config/heroic/WebCache"),
-				filepath.Join(home, flatpak, "com.heroicgameslauncher.hgl/.local/share/lutris/runtime"),
-			}, false},
-			{"Discord Cache", []string{
-				filepath.Join(home, ".config/discord/Cache"),
-				filepath.Join(home, ".config/discord/Code Cache"),
-				filepath.Join(home, ".config/discord/GPUCache"),
-				filepath.Join(home, flatpak, "com.discordapp.Discord/config/discord/Cache"),
-				filepath.Join(home, flatpak, "com.discordapp.Discord/config/discord/Code Cache"),
-				filepath.Join(home, flatpak, "com.discordapp.Discord/config/discord/GPUCache"),
-			}, false},
-			{"Telegram Cache", []string{filepath.Join(
-				home, ".local/share/TelegramDesktop/tdata/user_data/cache"),
-				filepath.Join(home, flatpak, "org.telegram.desktop/data/TelegramDesktop/tdata/user_data/cache"),
-			}, false},
-			{"Spotify Cache", []string{
-				filepath.Join(home, cache, "spotify"),
-				filepath.Join(home, flatpak, "com.spotify.Client/cache/spotify"),
-			}, false},
-			{"VS Code Cache", []string{
-				filepath.Join(home, ".config/Code/Cache"),
-				filepath.Join(home, ".config/Code/Code Cache"),
-				filepath.Join(home, ".config/Code/CachedData"),
-				filepath.Join(home, ".config/Code/GPUCache"),
-				filepath.Join(home, ".config/Code/User/workspaceStorage"),
-				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/Cache"),
-				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/Code Cache"),
-				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/CachedData"),
-				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/GPUCache"),
-				filepath.Join(home, flatpak, "com.visualstudio.code/config/Code/User/workspaceStorage"),
-			}, false},
-			{"JetBrains IDE Cache", []string{filepath.Join(home, cache, "JetBrains/*/caches")}, false},
-			{"Slack Cache", []string{
-				filepath.Join(home, ".config/Slack/Cache"),
-				filepath.Join(home, ".config/Slack/Code Cache"),
-				filepath.Join(home, ".config/Slack/GPUCache"),
-				filepath.Join(home, flatpak, "com.slack.Slack/config/Slack/Cache"),
-				filepath.Join(home, flatpak, "com.slack.Slack/config/Slack/Code Cache"),
-				filepath.Join(home, flatpak, "com.slack.Slack/config/Slack/GPUCache"),
-			}, false},
-			{"Shader Cache", []string{
-				filepath.Join(home, cache, "mesa_shader_cache"),
-				filepath.Join(home, cache, "nvidia/GLCache"),
-			}, false},
-			{"Go Build Cache", []string{filepath.Join(home, cache, "go-build")}, false},
-			{"Pip Cache", []string{filepath.Join(home, cache, "pip")}, false},
-			{"NPM Cache", []string{filepath.Join(home, ".npm/_cacache")}, false},
-			{"Yarn Cache", []string{filepath.Join(home, cache, "yarn")}, false},
-			{"Cargo Cache", []string{filepath.Join(home, ".cargo/registry/cache")}, false},
-			{"NuGet Cache", []string{filepath.Join(home, ".nuget/packages")}, false},
-			{"Gradle Cache", []string{filepath.Join(home, ".gradle/caches")}, false},
-		}
-	}
-}
-
-// getDiskMetrics uses gopsutil to fetch precise, platform-independent disk data.
-func getDiskMetrics() (freeGB float64, totalStr, freeStr string) {
-	const GB = 1024 * 1024 * 1024
-
-	// On Linux, "/" is the root. On Windows, gopsutil handles the mapping to the system drive.
-	usage, err := disk.Usage("/")
-	if err != nil {
-		// Fallback for specific Windows environments if "/" fails
-		usage, err = disk.Usage("C:")
-		if err != nil {
-			return 0, "N/A", "N/A"
-		}
-	}
-
-	freeGB = float64(usage.Free) / GB
-	totalStr = fmt.Sprintf("%.2f GB", float64(usage.Total)/GB)
-	freeStr = fmt.Sprintf("%.2f GB", freeGB)
-	return
-}
-
-// formatMB converts bytes to a string representing Megabytes
-func formatMB(bytes int64) string {
-	mb := float64(bytes) / 1024 / 1024
-	return fmt.Sprintf("%.2f MB", mb)
-}
-
-// getDirSize utilizes WalkDir (introduced in Go 1.16), which is significantly
-// faster than the older filepath.Walk because it avoids unnecessary Lstat calls.
-func getDirSize(path string) int64 {
-	var size int64
-	// Resolve glob patterns (e.g., paths containing '*')
-	matches, _ := filepath.Glob(expandHome(path))
-
-	for _, m := range matches {
-		// WalkDir is the high-performance standard for scanning directories
-		_ = filepath.WalkDir(m, func(_ string, d os.DirEntry, err error) error {
-			if err != nil {
-				// If a folder is restricted (e.g. System Cache), we just skip it
-				return nil
-			}
-			if !d.IsDir() {
-				info, err := d.Info()
-				if err == nil {
-					size += info.Size()
-				}
-			}
-			return nil
-		})
-	}
-	return size
-}
-
-// expandHome resolves the shorthand '~/ ' to the absolute user home directory
-func expandHome(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		home, _ := os.UserHomeDir()
-		return filepath.Join(home, path[2:])
-	}
-	return path
-}
-
 // ========================= MENU UI LOGIC =========================
 
 func showBanner() {
@@ -466,8 +136,8 @@ func logWarn(msg string) { fmt.Printf("%s[!] %s%s\n", YELLOW, msg, RC) }
 func renderMenu(existing []Program, idx int, fullRedraw bool) {
 	if fullRedraw {
 		showBanner()
-		fmt.Printf("Use ↑/↓ or W/S to navigate | [ENTER] to select | [C] to clean\n")
-		fmt.Printf("Folders found: [%d]\n", len(existing))
+		fmt.Printf("↑/↓ or W/S to navigate | [ENTER] to select | [C] to clean\n")
+		fmt.Printf("Folders found: %d\n", len(existing))
 	}
 
 	// Render each detected program entry
@@ -485,29 +155,6 @@ func renderMenu(existing []Program, idx int, fullRedraw bool) {
 		// Clear the current line and print the menu entry
 		fmt.Printf("%s%s%s %s\n", CLEARLINE, cursor, check, existing[i].Name)
 	}
-}
-
-// function to scan which programs actually exist on the disk
-func scanForExisting() []Program {
-	allPrograms := getPrograms()
-	existing := []Program{}
-	for _, p := range allPrograms {
-		found := false
-		var totalSize int64
-		for _, path := range p.Paths {
-			matches, _ := filepath.Glob(expandHome(path))
-			if len(matches) > 0 {
-				found = true
-				totalSize += getDirSize(path)
-			}
-		}
-		if found {
-			// We format the name here so it's ready for both UI and Logs
-			p.Name = fmt.Sprintf("%-30s %s(%s)%s", p.Name, YELLOW, formatMB(totalSize), RC)
-			existing = append(existing, p)
-		}
-	}
-	return existing
 }
 
 // handleMenu manages user input for navigation and selection
@@ -680,33 +327,6 @@ func runCleanup(programs []Program) {
 	cc_exit()
 }
 
-func deletePath(path string) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return
-	}
-
-	if !info.IsDir() {
-		_ = os.Remove(path)
-		return
-	}
-
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		fmt.Printf(CLEARLINE)
-		logWarn("Cannot read " + path + ": " + err.Error())
-		return
-	}
-
-	for _, e := range entries {
-		full := filepath.Join(path, e.Name())
-		if err := os.RemoveAll(full); err != nil {
-			fmt.Printf(CLEARLINE)
-			logWarn("Skipped " + e.Name() + ": " + err.Error())
-		}
-	}
-}
-
 func main() {
 	flag.Parse()
 
@@ -721,10 +341,6 @@ func main() {
 	if *Flagversion {
 		fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
 		return
-	}
-
-	if !*Flagnoinit && !*Flagauto {
-		initApp()
 	}
 
 	// AUTOMATION LOGIC

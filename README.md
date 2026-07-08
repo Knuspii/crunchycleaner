@@ -1,11 +1,16 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg" />
-  <a href="https://goreportcard.com/report/github.com/knuspii/crunchycleaner/v2"><img src="https://goreportcard.com/badge/github.com/knuspii/crunchycleaner/v2" alt="Go Report Card" /></a>
-  <a href="https://github.com/knuspii/crunchycleaner/actions/workflows/go.yml"><img src="https://github.com/knuspii/crunchycleaner/actions/workflows/go.yml/badge.svg" alt="Build" /></a>
-  <a href="https://github.com/knuspii/crunchycleaner/stargazers"><img src="https://img.shields.io/github/stars/knuspii/crunchycleaner?style=social" alt="GitHub Stars" /></a>
-  <br>
-  <img src="https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green?" />
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-blue?logo=linux&logoColor=white" alt="Platform" />
+  <a href="https://github.com/knuspii/crunchycleaner/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/knuspii/crunchycleaner/go.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build&labelColor=111111&color=00c853" alt="Build">
+  </a>
+  <a href="https://github.com/knuspii/crunchycleaner/releases">
+    <img src="https://img.shields.io/github/v/release/knuspii/crunchycleaner?style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=111111&color=ff6d00" alt="Release">
+  </a>
+  <a href="https://github.com/knuspii/crunchycleaner/releases">
+    <img src="https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=111111&color=8e24aa" alt="Downloads">
+  </a>
+  <a href="https://github.com/knuspii/crunchycleaner">
+    <img src="https://img.shields.io/github/stars/knuspii/crunchycleaner?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=111111&color=fbc02d" alt="Stars">
+  </a>
 </p>
 
 <div align="center">
@@ -24,17 +29,21 @@
 ### Supported Software List:
 | Category | Software / Path |
 | :--- | :--- |
-| **System** | System Logs, System Temp Folders, Thumbnail Cache, Shader Cache |
-| **Browsers** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
-| **Development** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
-| **Gaming** | Steam, Epic Games(Heroic) |
-| **Apps** | Discord, Spotify, Thunderbird, Telegram |
+| **System:** | System Logs, System Temp, Thumbnail, Shell History, Package Managers, Shader Cache |
+| **Browsers:** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
+| **Development:** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
+| **Gaming:** | Steam, Epic Games(Heroic) |
+| **Apps:** | Discord, Spotify, Thunderbird, Telegram |
 
 **Flatpak is supported** \
-**Snap is not supported**
+**Snap is NOT supported**
+
+---
 
 ## 📥 How to Install & Download ![Download](https://img.shields.io/github/downloads/knuspii/crunchycleaner/total?color=green)
-Paste the corresponding command into your terminal and restart it afterwards. \
+**Download the latest binary and just run/open it: [[Download here]](https://github.com/knuspii/crunchycleaner/releases)** \
+Or paste the corresponding command into your terminal and restart it afterwards to fully install it. \
+\
 For Linux (using sudo):
 ```
 curl -L https://github.com/Knuspii/CrunchyCleaner/releases/latest/download/crunchycleaner -o cc && sudo install -m 755 cc /usr/local/bin/crunchycleaner && rm cc
@@ -47,10 +56,7 @@ For Go (using go install):
 ```
 go install github.com/knuspii/crunchycleaner/v2@latest
 ```
-After that you can just type `crunchycleaner -v` into your terminal to verify it's installed. \
-
-Or download the binary and just run/open it:
-[[Download here]](https://github.com/knuspii/crunchycleaner/releases)
+After that you can just type `crunchycleaner -v` into your terminal to verify it's installed.
 
 ---
 
@@ -58,11 +64,8 @@ Or download the binary and just run/open it:
 ```
   -a    Automate cleaning (select all and start immediately)
   -d    Simulation mode without deleting files (for testing)
-  -t    Skip terminal resizing and environment initialization
   -v    Display version information
 ```
-
-If you only use a terminal, you might want to use the `-t` flag.
 
 ---
 
@@ -70,7 +73,7 @@ If you only use a terminal, you might want to use the `-t` flag.
 > You use this tool at your own risk!
 
 > [!NOTE]
-> AI was used for this project in some parts.
+> AI was used for this project in some parts. BUT THIS IS NOT VIBECODED!
 
 ## Q&A
 **Q:** Will this break my system? \
@@ -84,8 +87,11 @@ If you only use a terminal, you might want to use the `-t` flag.
 
 ## Other Downloads
 CrunchyCleaner is also available on SourceForge \
+\
 [![Download CrunchyCleaner](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
-[![Download CrunchyCleaner](https://img.shields.io/sourceforge/dt/crunchycleaner.svg)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
+[![Total Downloads](https://img.shields.io/sourceforge/dt/crunchycleaner.svg)](https://sourceforge.net/projects/crunchycleaner/files/latest/download)
+
+---
 
 ### 🎖️ Featured on
 [![Awesome TUIs](https://img.shields.io/badge/Awesome-TUIs-orange?style=flat-square)](https://github.com/rothgar/awesome-tuis)
