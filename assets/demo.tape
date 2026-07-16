@@ -3,7 +3,7 @@ Output crunchycleaner-demo.gif
 Set FontSize 17
 Set Width 800
 Set Height 600
-Set TypingSpeed 100ms
+Set TypingSpeed 50ms
 Set Padding 10
 Set WindowBar Colorful
 
@@ -28,8 +28,8 @@ Up @ 800ms
 Sleep 1s
 Enter
 Down @ 500ms
-Enter
 Down @ 500ms
+Enter
 Sleep 1s
 Type "a"
 Sleep 2s

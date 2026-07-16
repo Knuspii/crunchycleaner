@@ -37,22 +37,21 @@ import (
 
 // Global constants for UI and Versioning
 const (
-	CC_VERSION  = "2.7"
-	COLS        = 60
-	LINES       = 32
-	GOOS        = runtime.GOOS
-	CLEARLINE   = "\r\033[K"
-	CLEARSCREEN = "\033[H\033[2J"
-	YELLOW      = "\033[33m"
-	CYAN        = "\033[36m"
-	GREEN       = "\033[32m"
-	RC          = "\033[0m" // Reset Color
+	CC_VERSION = "2.8"
+	COLS       = 56
+	LINES      = 32
+	GOOS       = runtime.GOOS
+	CLEARLINE  = "\r\033[K"
+	YELLOW     = "\033[33m"
+	CYAN       = "\033[36m"
+	GREEN      = "\033[32m"
+	RC         = "\033[0m"
 )
 
 var (
 	// CLI Flags
 	Flagversion = flag.Bool("v", false, "Display version information")
-	Flagdryrun  = flag.Bool("d", false, "Simulation mode without deleting files (for testing)")
+	Flagdryrun  = flag.Bool("d", false, "Dry-run mode without deleting files (for testing)")
 	Flagauto    = flag.Bool("a", false, "Automate cleaning (select all and start immediately)")
 )
 
@@ -123,7 +122,7 @@ func showBanner() {
  |  |              |  | %sCrunchyCleaner%s
  |  |              |  | Made by: Knuspii, (M)
  |[]|              |[]| Version: %s
- |__|______________|__| Disk-Space: %s / %s%s
+ |__|______________|__| Disk: %s / %s%s
 `, YELLOW, RC, YELLOW, CC_VERSION, free, total, RC)
 	line()
 }
@@ -136,16 +135,16 @@ func logWarn(msg string) { fmt.Printf("%s[!] %s%s\n", YELLOW, msg, RC) }
 func renderMenu(existing []Program, idx int, fullRedraw bool) {
 	if fullRedraw {
 		showBanner()
-		fmt.Printf("↑/↓ or W/S to navigate | [ENTER] to select | [C] to clean\n")
+		fmt.Printf("↑/↓ or W/S to navigate | ENTER to select | C to clean\n")
 		fmt.Printf("Folders found: %d\n", len(existing))
 	}
 
 	// Render each detected program entry
 	for i := range existing {
-		cursor := "    "
+		cursor := "   "
 		// Highlight the currently selected entry
 		if i == idx {
-			cursor = YELLOW + "  >_" + RC
+			cursor = YELLOW + " >_" + RC
 		}
 		// Checkbox indicator for selection state
 		check := "[ ]"
@@ -186,12 +185,12 @@ func handleMenu() {
 	idx := 0
 	renderMenu(existing, idx, true)
 	// Main Input Loop
+	// This might be fucked up but it works lol
 	for {
 		char, key, err := keyboard.GetKey()
 		if err != nil {
 			break
 		}
-
 		updated := false
 
 		// Navigation and selection controls
@@ -223,7 +222,7 @@ func handleMenu() {
 			updated = true
 		} else if char == 'c' || char == 'C' {
 			runCleanup(existing)
-		} else if key == keyboard.KeyCtrlC {
+		} else if key == keyboard.KeyCtrlC || char == 'q' || char == 'Q' {
 			cc_exit()
 		}
 
@@ -278,7 +277,7 @@ func runCleanup(programs []Program) {
 
 			for _, m := range matches {
 				if *Flagdryrun {
-					fmt.Printf(CLEARLINE)
+					fmt.Print(CLEARLINE)
 					logInfo("Would clean: " + m)
 					continue
 				}
@@ -291,7 +290,7 @@ func runCleanup(programs []Program) {
 		if idx := strings.Index(name, "("); idx != -1 {
 			name = strings.TrimSpace(name[:idx])
 		}
-		fmt.Printf(CLEARLINE)
+		fmt.Print(CLEARLINE)
 		logOK(name)
 	}
 
@@ -305,7 +304,7 @@ func runCleanup(programs []Program) {
 	}
 
 	if *Flagdryrun {
-		logOK("Simulation finished")
+		logOK("Dry-Run finished")
 	} else {
 		logOK("Cleaning finished")
 	}
@@ -317,7 +316,11 @@ func runCleanup(programs []Program) {
 	}
 
 	line()
-	fmt.Printf("CrunchyCleaner cleaned: %s%.2f MB%s\n", YELLOW, cleaned, RC)
+	if *Flagdryrun {
+		fmt.Printf("CrunchyCleaner cleaned: NOTHING (DRY-RUN)\n")
+	} else {
+		fmt.Printf("CrunchyCleaner cleaned: %s%.2f MB%s\n", YELLOW, cleaned, RC)
+	}
 
 	if !*Flagauto {
 		keyboard.Close()

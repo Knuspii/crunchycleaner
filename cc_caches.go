@@ -61,6 +61,11 @@ func getPrograms() []Program {
 				filepath.Join(localAppData, "Opera Software/Opera Stable/Cache"),
 				filepath.Join(localAppData, "Opera Software/Opera Stable/Code Cache"),
 			}, false},
+			{"Zen Browser Cache", []string{
+				filepath.Join(localAppData, "zen/Profiles/*/cache2"),
+				filepath.Join(localAppData, "zen/Profiles/*/jumpListCache"),
+				filepath.Join(appData, "zen/Profiles/*/shader-cache"),
+			}, false},
 			{"Thunderbird Cache", []string{
 				filepath.Join(localAppData, "Thunderbird/Profiles/*/cache2"),
 			}, false},
@@ -152,6 +157,10 @@ func getPrograms() []Program {
 				filepath.Join(home, ".config/opera/Cache"),
 				filepath.Join(home, flatpak, "com.opera.Opera/cache/opera/Cache"),
 				filepath.Join(home, flatpak, "com.opera.Opera/config/opera/Cache"),
+			}, false},
+			{"Zen Browser Cache", []string{
+				filepath.Join(home, cache, "zen/*/cache2"),
+				filepath.Join(home, flatpak, "app.zen_browser.zen/cache/zen/*/cache2"),
 			}, false},
 			{"Thunderbird Cache", []string{
 				filepath.Join(home, cache, "thunderbird/*/cache2"),
