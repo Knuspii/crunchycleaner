@@ -30,7 +30,7 @@
 | Category | Software / Path |
 | :--- | :--- |
 | **System:** | System Logs, System Temp, Thumbnail, Shell History, Package Managers, Shader Cache |
-| **Browsers:** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
+| **Browsers:** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera, Zen |
 | **Development:** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
 | **Gaming:** | Steam, Epic Games(Heroic) |
 | **Apps:** | Discord, Spotify, Thunderbird, Telegram |
@@ -63,7 +63,7 @@ After that you can just type `crunchycleaner -v` into your terminal to verify it
 ## Options:
 ```
   -a    Automate cleaning (select all and start immediately)
-  -d    Simulation mode without deleting files (for testing)
+  -d    Dry-run mode without deleting files (for testing)
   -v    Display version information
 ```
 
