@@ -24,12 +24,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/eiannone/keyboard"
@@ -62,7 +60,49 @@ type Program struct {
 	Checked bool     // Selection state in the menu
 }
 
+type KeyEvent struct {
+	Char rune
+	Key  keyboard.Key
+	Err  error
+}
+
+var keyEvents = make(chan KeyEvent, 100)
+
 // ========================= HELPER FUNCTIONS =========================
+
+// startKeyboardListener initializes the keyboard and starts a background listener
+func startKeyboardListener() {
+	if err := keyboard.Open(); err != nil {
+		fmt.Printf("Error initializing keyboard: %v\n", err)
+		os.Exit(1)
+	}
+
+	go func() {
+		for {
+			char, key, err := keyboard.GetKey()
+			if err != nil {
+				continue
+			}
+			// Immediate, global exit on 'q', 'Q' or Ctrl+C
+			if char == 'q' || char == 'Q' || key == keyboard.KeyCtrlC {
+				cc_exit()
+			}
+			// Forward other keys to the program for processing
+			keyEvents <- KeyEvent{Char: char, Key: key, Err: err}
+		}
+	}()
+}
+
+// flushKeyEvents clears any pending key events in the channel buffer (just for safety)
+func flushKeyEvents() {
+	for {
+		select {
+		case <-keyEvents:
+		default:
+			return
+		}
+	}
+}
 
 // cc_exit provides a clean termination of the application
 func cc_exit() {
@@ -77,8 +117,13 @@ func cc_exit() {
 }
 
 func pause() {
+	flushKeyEvents()
 	fmt.Printf("\nPress [ENTER] to continue...")
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	for ev := range keyEvents {
+		if ev.Key == keyboard.KeyEnter {
+			break
+		}
+	}
 }
 
 // line draws a formatted horizontal separator
@@ -158,57 +203,64 @@ func renderMenu(existing []Program, idx int, fullRedraw bool) {
 
 // handleMenu manages user input for navigation and selection
 func handleMenu() {
-	// Initial scan of the filesystem to find existing directories
+	// Channels used to synchronize and control the lifecycle of the background spinner goroutine
 	stop := make(chan bool)
 	ack := make(chan bool)
-	go spinner("Starting CrunchyCleaner & Scanning filesystem", stop, ack)
-	time.Sleep(1 * time.Second)
 
+	// Spin up the visual loader in a separate thread so it doesn't block filesystem scanning
+	go spinner("Starting CrunchyCleaner & Scanning filesystem", stop, ack)
+	time.Sleep(1 * time.Second) // Give the user a brief moment to see the loading spinner
+
+	// Perform the actual scan on the local machine to find targeted cache paths
 	existing := scanForExisting()
 
-	stop <- true // Tell spinner to stop
-	<-ack        // WAIT for spinner to clear the line
+	// Terminate the background spinner and wait for its clean shutdown signal
+	stop <- true
+	<-ack
 
-	// Abort if nothing was detected
+	// If no matching cache directories are found on the machine, display a warning and exit
 	if len(existing) == 0 {
 		fmt.Printf("\nNo cache directories found on your system")
 		pause()
 		return
 	}
 
-	// Enable raw keyboard input mode
-	if err := keyboard.Open(); err != nil {
-		panic(err)
-	}
-	defer keyboard.Close()
-
 	idx := 0
+	// Perform the initial, full redraw of the menu screen
 	renderMenu(existing, idx, true)
+
 	// Main Input Loop
-	// This might be fucked up but it works lol
+	// This loops infinitely, waiting for and processing incoming key events
 	for {
-		char, key, err := keyboard.GetKey()
+		// Read the next key event from the global background listener channel
+		ev := <-keyEvents
+		char, key, err := ev.Char, ev.Key, ev.Err
 		if err != nil {
 			break
 		}
+
+		// Track whether the menu selection or checkbox state has changed
 		updated := false
 
-		// Navigation and selection controls
+		// Navigate selection upwards (using Arrow Up or 'W'/'w')
 		if key == keyboard.KeyArrowUp || char == 'w' || char == 'W' {
 			if idx > 0 {
 				idx--
 				updated = true
 			}
+			// Navigate selection downwards (using Arrow Down or 'S'/'s')
 		} else if key == keyboard.KeyArrowDown || char == 's' || char == 'S' {
 			if idx < len(existing)-1 {
 				idx++
 				updated = true
 			}
+			// Toggle selection state of the highlighted list item (Spacebar or Enter)
 		} else if char == ' ' || key == keyboard.KeyEnter || key == keyboard.KeySpace {
 			existing[idx].Checked = !existing[idx].Checked
 			updated = true
+			// Toggle 'Select All' / 'Deselect All' logic when pressing 'A'/'a'
 		} else if char == 'a' || char == 'A' {
-			// Toggle "Select All" logic
+			// First, verify if every single discovered item is already checked
 			allChecked := true
 			for _, p := range existing {
 				if !p.Checked {
@@ -216,19 +268,20 @@ func handleMenu() {
 					break
 				}
 			}
+			// If all are checked, uncheck everything. If not, check everything.
 			for i := range existing {
 				existing[i].Checked = !allChecked
 			}
 			updated = true
+			// Trigger the cleanup sequence for all checked items (using 'C'/'c')
 		} else if char == 'c' || char == 'C' {
 			runCleanup(existing)
-		} else if key == keyboard.KeyCtrlC || char == 'q' || char == 'Q' {
-			cc_exit()
 		}
 
-		// Redraw menu entries in-place if state changed
+		// Redraw the menu dynamically if the UI state changed
 		if updated {
-			// Move cursor up to the start of the menu list
+			// Move terminal cursor back up to the start of the menu using ANSI escape codes.
+			// This prevents screen flickering by avoiding a complete terminal screen clear.
 			fmt.Printf("\033[%dA", len(existing))
 			renderMenu(existing, idx, false)
 		}
@@ -256,7 +309,7 @@ func runCleanup(programs []Program) {
 		}
 		fmt.Printf("\nUsername: %s", name)
 	}
-	//fmt.Printf("\nPress [CTRL+C] to cancel")
+	fmt.Printf("\nPress q to cancel")
 	fmt.Printf("\nCleaning caches started...\n")
 
 	stop := make(chan bool)
@@ -332,14 +385,7 @@ func runCleanup(programs []Program) {
 
 func main() {
 	flag.Parse()
-
-	// Capture OS Interrupts (like Ctrl+C) for graceful shutdown
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		cc_exit()
-	}()
+	startKeyboardListener()
 
 	if *Flagversion {
 		fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
