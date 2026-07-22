@@ -31,6 +31,7 @@ Down @ 500ms
 Down @ 500ms
 Enter
 Sleep 1s
+Down @ 500ms
 Type "a"
 Sleep 2s
 Type "c"

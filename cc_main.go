@@ -20,7 +20,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -309,7 +308,7 @@ func runCleanup(programs []Program) {
 		}
 		fmt.Printf("\nUsername: %s", name)
 	}
-	fmt.Printf("\nPress q to cancel")
+	fmt.Printf("\nPress Q to cancel")
 	fmt.Printf("\nCleaning caches started...\n")
 
 	stop := make(chan bool)
@@ -376,21 +375,31 @@ func runCleanup(programs []Program) {
 	}
 
 	if !*Flagauto {
-		keyboard.Close()
-		fmt.Printf("\nPress [ENTER] to exit")
-		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		for {
+			fmt.Printf("\nPress Q to exit")
+			ev := <-keyEvents
+			char, err := ev.Key, ev.Err
+			if err != nil {
+				break
+			}
+
+			if char == 'q' || char == 'Q' {
+				continue
+			}
+		}
 	}
 	cc_exit()
 }
 
 func main() {
 	flag.Parse()
-	startKeyboardListener()
 
 	if *Flagversion {
 		fmt.Printf("CrunchyCleaner %s\n", CC_VERSION)
 		return
 	}
+
+	startKeyboardListener()
 
 	// AUTOMATION LOGIC
 	if *Flagauto {
