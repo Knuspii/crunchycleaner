@@ -31,9 +31,8 @@
 | :--- | :--- |
 | **System:** | System Logs, System Temp, Thumbnail, Shell History, Package Managers, Shader Cache |
 | **Browsers:** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera, Zen |
-| **Development:** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
-| **Gaming:** | Steam, Epic Games(Heroic) |
-| **Apps:** | Discord, Spotify, Thunderbird, Telegram |
+| **Apps:** | Steam, Epic Games(Heroic), Discord, Telegram, Spotify |
+| **Development:** | Visual Studio Code, JetBrains IDE, Slack, Go, Pip, NPM, Yarn, Cargo, Electron, NuGet, Gradle, Playwright, Python uv, Node.js |
 
 **Flatpak is supported** \
 **Snap is NOT supported**
