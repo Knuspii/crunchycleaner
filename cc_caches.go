@@ -111,8 +111,16 @@ func getPrograms() []Program {
 				filepath.Join(home, ".cargo/registry/cache"),
 				filepath.Join(home, ".cargo/git/db"),
 			}, false},
+			{"Electron Cache", []string{
+				filepath.Join(localAppData, "electron/Cache"),
+				filepath.Join(localAppData, "electron/Code Cache"),
+				filepath.Join(localAppData, "electron/GPUCache"),
+			}, false},
 			{"NuGet Cache", []string{filepath.Join(home, ".nuget/packages")}, false},
 			{"Gradle Cache", []string{filepath.Join(home, ".gradle/caches")}, false},
+			{"Playwright Cache", []string{filepath.Join(localAppData, "ms-playwright")}, false},
+			{"Python uv Cache", []string{filepath.Join(localAppData, "uv/cache")}, false},
+			{"Node.js Cache", []string{filepath.Join(localAppData, "node-gyp")}, false},
 		}
 	} else {
 		// Linux
@@ -123,10 +131,13 @@ func getPrograms() []Program {
 			{"System Logs (Root)", []string{"/var/log/"}, false},
 			{"System Temp Folders (Root)", []string{"/tmp"}, false},
 			{"Package Manager Caches (Root)", []string{
-				"/var/cache/apt/archives/*.deb",
+				"/var/cache/apt/archives/*",
+				"/var/cache/apt/pkgcache.bin",
+				"/var/cache/apt/srcpkgcache.bin",
 				"/var/cache/pacman/pkg/*",
 				"/var/cache/dnf/*",
 				"/var/cache/snapd/*",
+				"/var/cache/apk/*",
 			}, false},
 			{"Thumbnail Cache", []string{filepath.Join(home, cache, "thumbnails")}, false},
 			{"Shell History", []string{filepath.Join(home, "*_history")}, false},
@@ -217,6 +228,8 @@ func getPrograms() []Program {
 				filepath.Join(home, flatpak, "com.slack.Slack/config/Slack/Code Cache"),
 				filepath.Join(home, flatpak, "com.slack.Slack/config/Slack/GPUCache"),
 			}, false},
+			{"Nix Cache", []string{
+				filepath.Join(home, ".cache/nix")}, false},
 			{"Shader Cache", []string{
 				filepath.Join(home, cache, "mesa_shader_cache"),
 				filepath.Join(home, cache, "nvidia/GLCache"),
@@ -226,8 +239,12 @@ func getPrograms() []Program {
 			{"NPM Cache", []string{filepath.Join(home, ".npm/_cacache")}, false},
 			{"Yarn Cache", []string{filepath.Join(home, cache, "yarn")}, false},
 			{"Cargo Cache", []string{filepath.Join(home, ".cargo/registry/cache")}, false},
+			{"Electron Cache", []string{filepath.Join(home, cache, "electron")}, false},
 			{"NuGet Cache", []string{filepath.Join(home, ".nuget/packages")}, false},
 			{"Gradle Cache", []string{filepath.Join(home, ".gradle/caches")}, false},
+			{"Playwright Cache", []string{filepath.Join(home, cache, "ms-playwright")}, false},
+			{"Python uv Cache", []string{filepath.Join(home, cache, "uv")}, false},
+			{"Node.js Cache", []string{filepath.Join(home, cache, "node-gyp")}, false},
 		}
 	}
 }
