@@ -69,7 +69,7 @@ var keyEvents = make(chan KeyEvent, 100)
 
 // ========================= HELPER FUNCTIONS =========================
 
-// startKeyboardListener initializes the keyboard and starts a background listener
+// Initializes the keyboard and starts a background listener
 func startKeyboardListener() {
 	if err := keyboard.Open(); err != nil {
 		fmt.Printf("Error initializing keyboard: %v\n", err)
@@ -218,10 +218,10 @@ func handleMenu() {
 	<-ack
 
 	// If no matching cache directories are found on the machine, display a warning and exit
-	if len(existing) == 0 {
+	if len(existing) <= 0 {
 		fmt.Printf("\nNo cache directories found on your system")
 		pause()
-		return
+		cc_exit()
 	}
 
 	idx := 0

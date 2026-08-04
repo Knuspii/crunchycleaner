@@ -100,7 +100,7 @@ func getPrograms() []Program {
 				filepath.Join(localAppData, "NVIDIA/GLCache"),
 				filepath.Join(localAppData, "NVIDIA/PerDriverVersion/DXCache"),
 			}, false},
-			{"Go Build Cache", []string{filepath.Join(localAppData, "go-build")}, false},
+			{"Golang Cache", []string{filepath.Join(localAppData, "go-build")}, false},
 			{"Pip Cache", []string{filepath.Join(localAppData, "pip/Cache")}, false},
 			{"NPM Cache", []string{filepath.Join(appData, "npm-cache/_cacache")}, false},
 			{"Yarn Cache", []string{
@@ -129,7 +129,10 @@ func getPrograms() []Program {
 		flatpak := ".var/app/"
 		return []Program{
 			{"System Logs (Root)", []string{"/var/log/"}, false},
-			{"System Temp Folders (Root)", []string{"/tmp"}, false},
+			{"System Temp Folders (Root)", []string{
+				"/tmp",
+				"/var/tmp",
+			}, false},
 			{"Package Manager Caches (Root)", []string{
 				"/var/cache/apt/archives/*",
 				"/var/cache/apt/pkgcache.bin",
@@ -234,7 +237,7 @@ func getPrograms() []Program {
 				filepath.Join(home, cache, "mesa_shader_cache"),
 				filepath.Join(home, cache, "nvidia/GLCache"),
 			}, false},
-			{"Go Build Cache", []string{filepath.Join(home, cache, "go-build")}, false},
+			{"Golang Cache", []string{filepath.Join(home, cache, "go-build")}, false},
 			{"Pip Cache", []string{filepath.Join(home, cache, "pip")}, false},
 			{"NPM Cache", []string{filepath.Join(home, ".npm/_cacache")}, false},
 			{"Yarn Cache", []string{filepath.Join(home, cache, "yarn")}, false},
