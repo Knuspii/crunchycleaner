@@ -129,10 +129,7 @@ func getPrograms() []Program {
 		flatpak := ".var/app/"
 		return []Program{
 			{"System Logs (Root)", []string{"/var/log/"}, false},
-			{"System Temp Folders (Root)", []string{
-				"/tmp",
-				"/var/tmp",
-			}, false},
+			{"System Temp Folders (Root)", []string{"/tmp",}, false},
 			{"Package Manager Caches (Root)", []string{
 				"/var/cache/apt/archives/*",
 				"/var/cache/apt/pkgcache.bin",
