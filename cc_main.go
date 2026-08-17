@@ -217,16 +217,16 @@ func handleMenu() {
 	stop <- true
 	<-ack
 
-	// If no matching cache directories are found on the machine, display a warning and exit
-	if len(existing) <= 0 {
-		fmt.Printf("\nNo cache directories found on your system")
-		pause()
-		cc_exit()
-	}
-
 	idx := 0
 	// Perform the initial, full redraw of the menu screen
 	renderMenu(existing, idx, true)
+	
+	// If no matching cache directories are found on the machine, display a warning and exit
+	if len(existing) <= 0 {
+		fmt.Printf("\nNo cache directories found on your system...")
+		pause()
+		cc_exit()
+	}
 
 	// Main Input Loop
 	// This loops infinitely, waiting for and processing incoming key events
