@@ -220,7 +220,7 @@ func handleMenu() {
 	idx := 0
 	// Perform the initial, full redraw of the menu screen
 	renderMenu(existing, idx, true)
-	
+
 	// If no matching cache directories are found on the machine, display a warning and exit
 	if len(existing) <= 0 {
 		fmt.Printf("\nNo cache directories found on your system...")
