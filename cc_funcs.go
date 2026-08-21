@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v3/disk"
 )
 
 // getDiskMetrics uses gopsutil to fetch precise, platform-independent disk data.
@@ -111,7 +111,7 @@ func deletePath(path string) {
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		fmt.Printf(CLEARLINE)
+		fmt.Print(CLEARLINE)
 		logWarn("Cannot read " + path + ": " + err.Error())
 		return
 	}
@@ -119,7 +119,7 @@ func deletePath(path string) {
 	for _, e := range entries {
 		full := filepath.Join(path, e.Name())
 		if err := os.RemoveAll(full); err != nil {
-			fmt.Printf(CLEARLINE)
+			fmt.Print(CLEARLINE)
 			logWarn("Skipped " + e.Name() + ": " + err.Error())
 		}
 	}

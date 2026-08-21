@@ -4,6 +4,7 @@ The most common way to contribute is by adding support for more applications.
 * Open the cc_caches.go file.
 * Locate the getPrograms() function
 * Add a new Program struct to the slice.
+* **Important:** Ensure that the application is kinda popular, I won't add SuperEditorX5000 lol.
 * **Important:** Ensure you provide paths for both Windows and Linux where possible.
 * Use filepath.Join and environment variables (like localAppData) and maintain cross-platform compatibility.
 

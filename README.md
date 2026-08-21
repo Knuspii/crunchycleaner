@@ -30,10 +30,9 @@
 | Category | Software / Path |
 | :--- | :--- |
 | **System:** | System Logs, System Temp, Thumbnail, Shell History, Package Managers, Shader Cache |
-| **Browsers:** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera |
-| **Development:** | Visual Studio Code, Slack, JetBrains IDE, Go, Pip, NPM, Yarn, Cargo, NuGet, Gradle |
-| **Gaming:** | Steam, Epic Games(Heroic) |
-| **Apps:** | Discord, Spotify, Thunderbird, Telegram |
+| **Browsers:** | Firefox, Google Chrome, Microsoft Edge, Brave, Opera, Zen |
+| **Apps:** | Steam, Epic Games(Heroic), Discord, Telegram, Spotify |
+| **Development:** | Visual Studio Code, JetBrains IDE, Slack, Go, Pip, NPM, Yarn, Cargo, Electron, NuGet, Gradle, Playwright, Python uv, Node.js |
 
 **Flatpak is supported** \
 **Snap is NOT supported**
@@ -63,7 +62,7 @@ After that you can just type `crunchycleaner -v` into your terminal to verify it
 ## Options:
 ```
   -a    Automate cleaning (select all and start immediately)
-  -d    Simulation mode without deleting files (for testing)
+  -d    Dry-run mode without deleting files (for testing)
   -v    Display version information
 ```
 
